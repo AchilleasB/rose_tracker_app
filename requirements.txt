@@ -1,0 +1,16 @@
+alembic==1.10.3
+click==8.1.3
+Flask==2.2.3
+Flask-Migrate==4.0.4
+Flask-SQLAlchemy==3.0.3
+itsdangerous==2.1.2
+Jinja2==3.1.2
+MarkupSafe==2.1.2
+SQLAlchemy==2.0.12
+Werkzeug==2.2.3
+ultralytics==11.0.0 
+opencv-python
+roboflow   
+requests
+pyyaml
+# gunicorn==20.1.0    # for deployment to a WSGI server
