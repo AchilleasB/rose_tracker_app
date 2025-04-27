@@ -1,11 +1,10 @@
 import os
-from flask import Blueprint, jsonify
-from src.track_roses_advanced import track_roses_advanced
 import threading
+from flask import Blueprint, jsonify
+from src.services.rose_tracker import RoseTrackerService
 
 realtime_tracking = Blueprint('realtime_tracking', __name__)
-model = 'data/best.pt'
-tracker_path = 'config/modified_botsort.yaml'
+rose_tracker_service = RoseTrackerService() 
 
 is_recording = False  # Global flag to control recording
 tracking_data = {"number_of_roses": 0}  # Shared data structure
@@ -27,15 +26,11 @@ def track_realtime():
     def run_tracking():
         global is_recording
         try:
-            track_roses_advanced(
-                model_path=model,
-                tracker_path=tracker_path,
-                input_source=0,
+            rose_tracker_service.track(
+                input_source=0,  # Use webcam (0 for default camera)
                 output_path=output_path,
-                conf=0.7,
-                iou=0.5,
-                tracking_data=tracking_data,  # Pass shared data structure
-                is_recording_flag=lambda: is_recording  # Pass flag to stop recording
+                tracking_data=tracking_data,
+                is_recording_flag=lambda: is_recording  # Pass the flag as a lambda function
             )
         finally:
             is_recording = False
