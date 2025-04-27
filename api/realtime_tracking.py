@@ -1,3 +1,10 @@
+"""
+Real-Time Tracking Module
+
+This module provides endpoints for real-time tracking of roses using a webcam.
+It allows users to start and stop tracking, and retrieve tracking data.
+"""	
+
 import os
 import threading
 from flask import Blueprint, jsonify
@@ -19,7 +26,7 @@ def track_realtime():
     is_recording = True
 
     # Define output path for annotated video
-    output_path = 'runs/detect/track/webcam/'
+    output_path = os.path.join('runs', 'detect', 'track', 'webcam')
     # Ensure the output directory exists
     os.makedirs(output_path, exist_ok=True)
     

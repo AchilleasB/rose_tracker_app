@@ -1,3 +1,10 @@
+"""
+Rose Tracker Service Module
+
+This module provides a service for tracking roses in images, videos, or real-time using YOLOv11 and a tracker.
+It handles the initialization of the YOLO model and tracker, and provides methods for tracking roses in different input sources.
+"""
+
 import os
 import cv2
 from ultralytics import YOLO
