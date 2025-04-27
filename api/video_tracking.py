@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify, request, send_file
-from src.track_roses_advanced import track_roses_advanced
+from src.services.rose_tracker import RoseTrackerService
 import os
 
 video_tracking = Blueprint('video_tracking', __name__)
-model = 'data/best.pt'
-tracker_path = 'config/modified_botsort.yaml'
+rose_tracker_service = RoseTrackerService() 
 
 # POST endpoint for tracking roses in a video file
 @video_tracking.route("/track/video", methods=["POST"])
@@ -30,13 +29,9 @@ def track_video():
         os.makedirs(output_path, exist_ok=True)
 
         # Track roses using a video file
-        video_output, number_of_roses  = track_roses_advanced(
-            model_path = model,
-            tracker_path = tracker_path,
+        video_output, number_of_roses = rose_tracker_service.track(
             input_source = file_path,
             output_path = output_path,
-            conf=0.7,
-            iou=0.5
         )
 
         # Return the annotated video file with metadata in headers

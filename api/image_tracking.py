@@ -1,10 +1,9 @@
 from flask import Blueprint, request, jsonify, send_file
-from src.track_roses_advanced import track_roses_advanced
 import os
+from src.services.rose_tracker import RoseTrackerService
 
 image_tracking = Blueprint('image_tracking', __name__)
-model = 'data/best.pt'
-tracker_path = 'config/modified_botsort.yaml'
+rose_tracker_service = RoseTrackerService()
 
 # POST endpoint for tracking roses in an image   
 @image_tracking.route("/track/image", methods=["POST"])
@@ -30,13 +29,9 @@ def track_image():
         os.makedirs(output_path, exist_ok=True)
 
         # Track roses using an image file
-        image_output, number_of_roses = track_roses_advanced(
-            model_path = model,
-            tracker_path = tracker_path,
+        image_output, number_of_roses = rose_tracker_service.track(
             input_source=file_path,
             output_path = output_path,
-            conf=0.7,
-            iou=0.5
         )
 
         # Return the annotated image file with metadata in headers
