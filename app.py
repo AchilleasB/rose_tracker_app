@@ -1,9 +1,10 @@
+from datetime import timedelta
 from flask import Flask
 from api.video_tracking import video_tracking
 from api.image_tracking import image_tracking
 from api.realtime_tracking import realtime_tracking
+from config.settings import settings
 from src.yolo_botsort import download_and_modify_botsort
-import os
 from config.database import db
 
 def create_app():
@@ -13,6 +14,13 @@ def create_app():
     # download the yolo-botsort tracker and modify to suit the project use case    
     download_and_modify_botsort()
 
+    # Configure the application
+    # app.config['SECRET_KEY'] = settings.SECRET_KEY
+    # app.config['DEBUG'] = settings.FLASK_DEBUG
+    # app.config['JWT_SECRET_KEY'] = settings.JWT_SECRET_KEY
+    # app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+    # app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+    
     # Initialize the database 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///roses.db'
     # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -23,11 +31,6 @@ def create_app():
     app.register_blueprint(image_tracking)
     app.register_blueprint(realtime_tracking)
 
-    # Ensure necessary directories exist
-    os.makedirs('uploads', exist_ok=True)
-    os.makedirs('runs/detect/track', exist_ok=True)
-
-    
     return app
 
 # Entry point for running the application.

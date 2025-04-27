@@ -1,6 +1,14 @@
+"""
+Video Tracking Module
+
+This module provides endpoints for processing video files to detect and track roses.
+It handles video file uploads, processes them using the RoseTrackerService,
+and returns the processed video along with tracking metadata.
+"""
 from flask import Blueprint, jsonify, request, send_file
 from src.services.rose_tracker import RoseTrackerService
 import os
+from config.settings import settings
 
 video_tracking = Blueprint('video_tracking', __name__)
 rose_tracker_service = RoseTrackerService() 
@@ -9,22 +17,26 @@ rose_tracker_service = RoseTrackerService()
 @video_tracking.route("/track/video", methods=["POST"])
 def track_video():
     try:
-        # Ensure the uploads/videos directory exists
-        video_upload_dir = os.path.join('uploads', 'videos')
+        # Use settings for upload directory
+        video_upload_dir = os.path.join(settings.UPLOAD_FOLDER, 'videos')
         os.makedirs(video_upload_dir, exist_ok=True)
 
         # Check if a file is uploaded
         if 'file' not in request.files:
             return jsonify({"error": "No file uploaded."}), 400
 
-        # Save the uploaded video file
+        # Validate file extension
         file = request.files['file']
+        if not file.filename.lower().endswith(tuple(settings.ALLOWED_VIDEO_EXTENSIONS)):
+            return jsonify({"error": "Invalid video file format."}), 400
+
+        # Save the uploaded video file
         filename = file.filename
         file_path = os.path.join(video_upload_dir, filename)
         file.save(file_path)
 
         # Define output path for annotated video
-        output_path = 'runs/detect/track/video/'
+        output_path = os.path.join('runs', 'detect', 'track', 'video')
         # Ensure the output directory exists
         os.makedirs(output_path, exist_ok=True)
 

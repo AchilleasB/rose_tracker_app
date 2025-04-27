@@ -1,8 +1,11 @@
 # Ignore configuration file
 config.ini
+config.settings.py
 
 # Ignore environment files
 .env
+.env.*
+!.env.example
 
 # Ignore video & image files
 videos/

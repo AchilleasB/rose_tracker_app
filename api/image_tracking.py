@@ -1,6 +1,15 @@
+"""
+Image Tracking Module
+
+This module provides endpoints for tracking roses in image files.
+It handles image file uploads, processes them using the RoseTrackerService,
+and returns the processed image along with tracking metadata.
+"""
+
 from flask import Blueprint, request, jsonify, send_file
 import os
 from src.services.rose_tracker import RoseTrackerService
+from config.settings import settings
 
 image_tracking = Blueprint('image_tracking', __name__)
 rose_tracker_service = RoseTrackerService()
@@ -9,22 +18,26 @@ rose_tracker_service = RoseTrackerService()
 @image_tracking.route("/track/image", methods=["POST"])
 def track_image():
     try:
-        # Ensure the uploads/images directory exists
-        image_upload_dir = os.path.join('uploads', 'images')
+        # Use settings for upload directory
+        image_upload_dir = os.path.join(settings.UPLOAD_FOLDER, 'images')
         os.makedirs(image_upload_dir, exist_ok=True)
 
-        # Check if a file is uploaded
         if 'file' not in request.files:
             return jsonify({"error": "No file uploaded."}), 400
 
-        # Save the uploaded image file
         file = request.files['file']
+        
+        # Validate file extension
+        if not file.filename.lower().endswith(tuple(settings.ALLOWED_IMAGE_EXTENSIONS)):
+            return jsonify({"error": "Invalid image file format."}), 400
+
+        # Save the uploaded image file
         filename = file.filename
         file_path = os.path.join(image_upload_dir, filename)
         file.save(file_path)
 
         # Define output path for annotated video
-        output_path = 'runs/detect/track/images/'
+        output_path = os.path.join('runs', 'detect', 'track', 'images')
         # Ensure the output directory exists
         os.makedirs(output_path, exist_ok=True)
 
