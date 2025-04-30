@@ -14,11 +14,13 @@ for the specific requirements of rose tracking, including:
 
 import requests
 import os
-from config.settings import settings
+from config.settings import Settings
+
+settings = Settings()
 
 def download_and_modify_botsort():
     """Download and configure the YOLO-BoTSORT tracker."""
-    output_path = 'config/modified_botsort.yaml'
+    output_path = settings.TRACKER_CONFIG_PATH
 
     if os.path.exists(output_path):
         print(f"{output_path} already exists. Skipping download and modification.")

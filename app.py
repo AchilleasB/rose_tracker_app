@@ -1,11 +1,15 @@
 from datetime import timedelta
 from flask import Flask
+from flask_cors import CORS
 from api.video_tracking import video_tracking
 from api.image_tracking import image_tracking
 from api.realtime_tracking import realtime_tracking
-from config.settings import settings
+from config.settings import Settings
+from api.retrain_model import retrain_bp
 from src.yolo_botsort import download_and_modify_botsort
 from config.database import db
+
+settings = Settings()
 
 def create_app():
     # Initialize the Flask application
@@ -26,14 +30,18 @@ def create_app():
     # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     # db.init_app(app)
 
+    # Configure CORS
+    CORS(app)
+
     # Register Blueprints
     app.register_blueprint(video_tracking)
     app.register_blueprint(image_tracking)
     app.register_blueprint(realtime_tracking)
+    app.register_blueprint(retrain_bp)
 
     return app
 
 # Entry point for running the application.
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=settings.FLASK_DEBUG)

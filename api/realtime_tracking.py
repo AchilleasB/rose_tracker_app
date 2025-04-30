@@ -1,63 +1,71 @@
 """
-Real-Time Tracking Module
+Realtime Tracking Module
 
-This module provides endpoints for real-time tracking of roses using a webcam.
-It allows users to start and stop tracking, and retrieve tracking data.
-"""	
+This module provides endpoints for real-time rose tracking using a webcam or video stream.
+It handles video stream processing using the RealtimeTrackerService and returns
+the processed video stream along with tracking metadata.
+"""
+from flask import Blueprint, Response, render_template, jsonify, request
+import cv2
+from src.services.realtime_rose_tracker import RealtimeTrackerService
+from config.settings import Settings
 
-import os
-import threading
-from flask import Blueprint, jsonify
-from src.services.rose_tracker import RoseTrackerService
-
+settings = Settings()
 realtime_tracking = Blueprint('realtime_tracking', __name__)
-rose_tracker_service = RoseTrackerService() 
+realtime_tracker_service = RealtimeTrackerService()
 
-is_recording = False  # Global flag to control recording
-tracking_data = {"number_of_roses": 0}  # Shared data structure
+# Store the latest count
+latest_count = 0
+last_count_update = 0
+COUNT_UPDATE_INTERVAL = 10  # seconds
 
-# Endpoint to start real-time tracking
-@realtime_tracking.route("/track/realtime/start", methods=["POST"])
-def track_realtime():
-    global is_recording
-    if is_recording:
-        return jsonify({"error": "Real-time tracking is already running."}), 400
-
-    is_recording = True
-
-    # Define output path for annotated video
-    output_path = os.path.join('runs', 'detect', 'track', 'webcam')
-    # Ensure the output directory exists
-    os.makedirs(output_path, exist_ok=True)
-    
-    def run_tracking():
-        global is_recording
+@realtime_tracking.route("/track/realtime/stream", methods=["GET"])
+def realtime_stream():
+    """Stream endpoint that provides the video feed"""
+    def generate_frames():
+        print("Starting video stream...")
         try:
-            rose_tracker_service.track(
-                input_source=0,  # Use webcam (0 for default camera)
-                output_path=output_path,
-                tracking_data=tracking_data,
-                is_recording_flag=lambda: is_recording  # Pass the flag as a lambda function
-            )
-        finally:
-            is_recording = False
+            for frame in realtime_tracker_service.track_realtime():
+                if frame is None:
+                    print("Received None frame from tracker")
+                    continue
+                
+                ret, buffer = cv2.imencode('.jpg', frame)
+                if not ret:
+                    print("Failed to encode frame")
+                    continue
+                
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                
+        except GeneratorExit:
+            print("Client closed connection")
+        except Exception as e:
+            print(f"Error in stream_camera: {str(e)}")
+            raise
+    
+    return Response(
+        generate_frames(),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
 
-    # Run tracking in a separate thread
-    threading.Thread(target=run_tracking).start()
-    return jsonify({"message": "Real-time tracking started. Check the webcam feed."}), 200
-
-
-# Endpoint to stop real-time tracking
 @realtime_tracking.route("/track/realtime/stop", methods=["POST"])
-def stop_realtime():
-    global is_recording
-    if not is_recording:
-        return jsonify({"error": "No real-time tracking is running."}), 400
+def stop_stream():
+    """Stop the video stream and release resources"""
+    try:
+        realtime_tracker_service.stop_tracking()
+        return jsonify({"status": "success", "message": "Stream stopped"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-    is_recording = False
-    return jsonify({"message": "Real-time tracking stopped."}), 200
+# Serve the webcam view template (for testing)
+# Triggers the stream from the frontend
+@realtime_tracking.route("/track/realtime", methods=["GET"])
+def realtime_view():
+    """Test view with embedded video stream"""
+    return render_template('realtime_stream.html')
 
-# Endpoint to get the current tracking data
-@realtime_tracking.route("/track/realtime/data", methods=["GET"])
-def get_realtime_data():
-    return jsonify(tracking_data), 200
+@realtime_tracking.route("/track/realtime/count", methods=["GET"])
+def get_latest_count():
+    """Endpoint to get the latest rose count"""
+    return jsonify(realtime_tracker_service.get_latest_count())

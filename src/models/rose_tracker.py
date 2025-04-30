@@ -1,11 +1,21 @@
+import os
+from config.settings import Settings
+
+
 class RoseTrackerModel:
     """
     A class to represent the Rose Tracker model.
     It uses YOLOv11 for object detection and a modified version of the BoT-SORT algorithm for tracking.
     """
+    settings = Settings()
 
-    def __init__(self, model_path='data/best.pt', tracker_config_path='config/modified_botsort.yaml', conf=0.7, iou=0.5):
-        self.model = model_path
-        self.tracker = tracker_config_path
-        self.conf = conf
-        self.iou = iou
+    def __init__(self, model_path=None):
+        # Default model is always data/best.pt
+        self.model = self.settings.DEFAULT_MODEL
+        self.tracker = self.settings.TRACKER_CONFIG_PATH
+        self.conf = self.settings.TRACKING_CONFIDENCE
+        self.iou = self.settings.TRACKING_IOU
+        
+        # If a specific model is requested, use it instead of default
+        if model_path and os.path.exists(model_path):
+            self.model = model_path
