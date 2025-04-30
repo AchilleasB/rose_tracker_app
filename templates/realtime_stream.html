@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rose Tracker - Real-time Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .stream-container {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        #videoStream {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        #restartButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #stopButton {
+            background-color: #f44336;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        #status {
+            font-size: 18px;
+            margin: 20px 0;
+            color: #666;
+        }
+        #roseCount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Real-time Rose Tracking</h1>
+        <div class="stream-container">
+            <img id="videoStream" src="{{ url_for('realtime_tracking.realtime_stream') }}" alt="Real-time Rose Tracking">
+        </div>
+        <div id="roseCount">Total Roses: <span id="count">0</span></div>
+        <div id="status">Status: <span id="trackingStatus">Tracking Active</span></div>
+        <div class="controls">
+            <button id="restartButton" onclick="restartTracking()">Restart Tracking</button>
+            <button id="stopButton" onclick="stopTracking()">Stop Tracking</button>
+        </div>
+    </div>
+
+    <script>
+        function updateRoseCount() {
+            fetch('/track/realtime/count')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('count').textContent = data.count;
+                })
+                .catch(error => console.error('Error fetching rose count:', error));
+        }
+
+        function stopTracking() {
+            fetch('/track/realtime/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('trackingStatus').textContent = 'Tracking Stopped';
+                    document.getElementById('stopButton').disabled = true;
+                    document.getElementById('restartButton').disabled = false;
+                    document.getElementById('videoStream').style.opacity = '0.5';
+                })
+                .catch(error => console.error('Error stopping tracking:', error));
+        }
+
+        function restartTracking() {
+            // Reload only the video stream by updating its src
+            const videoStream = document.getElementById('videoStream');
+            videoStream.src = "{{ url_for('realtime_tracking.realtime_stream') }}?" + new Date().getTime();
+            videoStream.style.opacity = '1';
+            document.getElementById('trackingStatus').textContent = 'Tracking Active';
+            document.getElementById('stopButton').disabled = false;
+            document.getElementById('restartButton').disabled = true;
+        }
+
+        // Update rose count every 10 seconds
+        setInterval(updateRoseCount, 10000);
+
+        // Initial count update
+        updateRoseCount();
+
+        // Initial button states
+        document.getElementById('stopButton').disabled = false;
+        document.getElementById('restartButton').disabled = true;
+    </script>
+</body>
+</html> 

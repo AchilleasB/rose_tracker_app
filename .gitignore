@@ -7,9 +7,6 @@ config.settings.py
 .env.*
 !.env.example
 
-# Ignore video & image files
-videos/
-images/
 
 # Ignore virtual environment directory
 venv/
