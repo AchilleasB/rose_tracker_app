@@ -13,14 +13,15 @@ class ModelRetrainingController:
         self._register_routes()
 
     def _register_routes(self):
-        self.blueprint.route('/save-annotation', methods=['POST'])(self.save_annotation)
-        self.blueprint.route('/retrain-model', methods=['POST'])(self.retrain_model)
-        self.blueprint.route('/models', methods=['GET'])(self.list_models)
-        self.blueprint.route('/models/select', methods=['POST'])(self.select_model)
+        self.blueprint.route('/retrain/save-annotation', methods=['POST'])(self.save_annotation)
+        self.blueprint.route('/retrain/new-model', methods=['POST'])(self.retrain_model)
+        self.blueprint.route('/retrain/models', methods=['GET'])(self.list_models)
+        self.blueprint.route('/retrain/models/select', methods=['POST'])(self.select_model)
 
     def save_annotation(self):
         try:
             if 'original_image_path' not in request.json:
+                print(request.json)
                 return jsonify({"error": "No original image path provided"}), 400
             
             if 'annotation' not in request.json:
@@ -30,8 +31,6 @@ class ModelRetrainingController:
                 request.json['original_image_path'],
                 request.json['annotation']
             )
-            
-            logging.debug(f"save_annotation called with original_image_path={request.json.get('original_image_path')}, annotation keys={list(request.json.get('annotation', {}).keys()) if isinstance(request.json.get('annotation'), dict) else type(request.json.get('annotation'))}")
             
             return jsonify({
                 "message": "Annotation saved successfully",
