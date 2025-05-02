@@ -1,5 +1,5 @@
 import os
-from config.settings import Settings
+from config.settings import Settings # type: ignore
 
 
 class RoseTrackerModel:

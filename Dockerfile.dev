@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install development dependencies
 RUN pip install \
@@ -32,8 +32,8 @@ RUN pip install \
 # Create necessary directories
 RUN mkdir -p uploads data runs/detect/track/{webcam,video,images}
 
-# Expose port
+# Expose ports for Flask and debugger
 EXPOSE 5000
 
-# Run the application with debugger
+# Run the application
 CMD ["flask", "--app", "app.py", "run", "--host=0.0.0.0", "--port=5000"] 
