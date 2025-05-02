@@ -16,4 +16,4 @@ opencv-python
 roboflow   
 requests
 pyyaml
-# gunicorn==20.1.0    # for deployment to a WSGI server
+gunicorn==20.1.0    # for deployment to a WSGI server

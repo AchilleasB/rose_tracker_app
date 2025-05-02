@@ -1,26 +1,12 @@
-"""
-Real-time Rose Tracking Service
-
-This module provides a service specifically for real-time rose tracking operations using a webcam.
-It handles the streaming of frames, rose detection, and count management.
-"""
-
+from src.services.tracking_service.base_tracking_service import BaseTrackingService
 import cv2
 import time
-from src.models.rose_tracker import RoseTrackerModel
-from ultralytics import YOLO
 
-class RealtimeTrackerService:
-    """Service class for real-time rose tracking operations."""
+class RealtimeTrackingService(BaseTrackingService):
+    """Service for real-time rose tracking operations."""
     
     def __init__(self):
-        """Initialize the real-time tracker with YOLO model and tracking parameters."""
-        rose_tracker_model = RoseTrackerModel()
-        self.model = YOLO(rose_tracker_model.model)
-        self.tracker = rose_tracker_model.tracker
-        self.conf = rose_tracker_model.conf
-        self.iou = rose_tracker_model.iou
-        
+        super().__init__()
         # Count management
         self.latest_count = 0
         self.last_count_update = 0
@@ -61,7 +47,7 @@ class RealtimeTrackerService:
 
                     # Update rose count tracking if results are valid
                     if results and len(results) > 0 and hasattr(results[0], 'boxes'):
-                        self._track_detections(results[0].boxes)
+                        self.track_detections(results[0].boxes)
                         annotated_frame = results[0].plot()
                     else:
                         annotated_frame = frame  # Use original frame if detection fails
@@ -89,7 +75,7 @@ class RealtimeTrackerService:
             self.cap = None
         print("Camera resources released")
 
-    def _track_detections(self, boxes):
+    def track_detections(self, boxes):
         """Track rose detections and maintain cumulative count."""
         current_time = time.time()
         self.current_frame_roses.clear()
@@ -113,9 +99,9 @@ class RealtimeTrackerService:
         # Update count if interval has passed
         time_since_update = current_time - self.last_count_update
         if time_since_update >= self.COUNT_UPDATE_INTERVAL:
-            self._update_count()
+            self.update_count()
 
-    def _update_count(self):
+    def update_count(self):
         """Update the latest count based on total unique roses tracked."""
         self.latest_count = len(self.tracked_roses)
         self.last_count_update = time.time()
