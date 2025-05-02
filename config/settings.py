@@ -11,7 +11,6 @@ class Settings:
         self.BASE_DIR = Path(__file__).parent.parent
         self.DATA_DIR = os.path.join(self.BASE_DIR, 'data')
         self.MODELS_DIR = os.path.join(self.DATA_DIR, 'models')
-        self.ANNOTATED_DATA_DIR = os.path.join(self.DATA_DIR, 'annotated_images')
         self.TRAINING_OUTPUT_DIR = os.path.join(self.DATA_DIR, 'training_outputs')
         
         # Model paths and configuration
@@ -25,8 +24,9 @@ class Settings:
         self.TRACKING_IOU = 0.6
             
         # Upload directories
-        self.UPLOAD_IMAGES_DIR = os.path.join(self.BASE_DIR, 'uploads', 'images')
-        self.UPLOAD_VIDEOS_DIR = os.path.join(self.BASE_DIR, 'uploads', 'videos')
+        self.UPLOADS_DIR = os.path.join(self.BASE_DIR, 'uploads')
+        self.UPLOAD_IMAGES_DIR = os.path.join(self.UPLOADS_DIR, 'images')
+        self.UPLOAD_VIDEOS_DIR = os.path.join(self.UPLOADS_DIR, 'videos')
         
         # Tracking output directories
         self.TRACKING_IMAGES_DIR = os.path.join(self.BASE_DIR, 'runs', 'detect', 'track', 'images')
@@ -43,15 +43,11 @@ class Settings:
         """Create all necessary directories if they don't exist."""
         directories = [
             self.MODELS_DIR,
-            self.ANNOTATED_DATA_DIR,
             self.TRAINING_OUTPUT_DIR,
             self.UPLOAD_IMAGES_DIR,
             self.UPLOAD_VIDEOS_DIR,
             self.TRACKING_IMAGES_DIR,
-            self.TRACKING_VIDEOS_DIR,
-            os.path.join(self.ANNOTATED_DATA_DIR, 'images'),
-            os.path.join(self.ANNOTATED_DATA_DIR, 'annotations'),
-            os.path.join(self.ANNOTATED_DATA_DIR, 'videos')
+            self.TRACKING_VIDEOS_DIR
         ]
         
         for directory in directories:
