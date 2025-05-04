@@ -14,7 +14,7 @@ A computer vision application for tracking and counting roses in images, videos,
 
 - Python 3.8 or higher
 - OpenCV
-- Ultralytics YOLOv8
+- Ultralytics YOLOv11
 - CUDA-capable GPU (recommended for real-time tracking)
 
 ## Installation
