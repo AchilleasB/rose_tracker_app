@@ -27,15 +27,15 @@ git clone https://github.com/yourusername/rose_tracker_app.git
 cd rose_tracker_app
 ```
 
-2. Build the Docker image:
+2. Build and Run the Docker image:
 ```bash
-docker build -t rose-tracker .
+# Build
+docker-compose --build
+# Run
+docker-compose up
 ```
 
-3. Run the application:
-```bash
-docker run -it --gpus all -p 8000:8000 rose-tracker
-```
+3. Access the app at: http://localhost:5000
 
 ### Option 2: Local Setup
 
