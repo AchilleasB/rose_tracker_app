@@ -15,7 +15,6 @@ A computer vision application for tracking and counting roses in images, videos,
 - Python 3.8 or higher
 - OpenCV
 - Ultralytics YOLOv11
-- CUDA-capable GPU (recommended for real-time tracking)
 
 ## Installation
 
@@ -31,6 +30,7 @@ cd rose_tracker_app
 ```bash
 # Build
 docker-compose --build
+
 # Run
 docker-compose up
 ```
