@@ -36,4 +36,4 @@ RUN mkdir -p uploads data runs/detect/track/{webcam,video,images}
 EXPOSE 5000
 
 # Run the application
-CMD ["flask", "--app", "app.py", "run", "--host=0.0.0.0", "--port=5000"] 
+CMD ["flask", "--app", "app.py", "run", "--host=0.0.0.0", "--port=5000"]

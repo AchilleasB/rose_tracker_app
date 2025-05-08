@@ -7,6 +7,8 @@ A computer vision application for tracking and counting roses in images, videos,
 - Image tracking: Process and annotate images with rose detections
 - Video tracking: Track roses in video files with frame-by-frame analysis
 - Real-time tracking: Live rose tracking using webcam or camera feed
+  - Supports browser-based camera access for remote deployment
+  - Works with containerized environments like Docker
 - Model retraining: Capability to retrain the model with new data
 - Unique rose counting: Track and count unique roses across frames
 
@@ -15,6 +17,7 @@ A computer vision application for tracking and counting roses in images, videos,
 - Python 3.8 or higher
 - OpenCV
 - Ultralytics YOLOv11
+- Modern web browser with camera access capabilities (for browser-based tracking)
 
 ## Installation
 
@@ -65,6 +68,24 @@ pip install -r requirements.txt
 ```bash
 python app.py
 ```
+
+## Real-time Tracking Modes
+
+The application supports two modes for real-time tracking:
+
+### 1. Direct Camera Access (Local Development)
+
+When running locally, the application can directly access your machine's camera using OpenCV. This mode is not suitable for containerized or server deployments.
+
+### 2. Browser-based Camera Access (Remote/Docker Deployment)
+
+For server or Docker deployments, the application uses browser-based camera access:
+- The browser asks for permission to use the camera
+- Camera frames are sent to the server for processing via secure HTTP requests
+- Processed frames with tracking results are returned to the browser
+- No direct camera access from the server is needed
+
+This mode allows the application to run in environments where direct camera access is restricted or not possible.
 
 ## Project Structure
 
