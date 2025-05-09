@@ -35,36 +35,43 @@ class RealtimeTrackingService(BaseTrackingService):
                     print("Failed to read frame")
                     continue
 
-                # Process frame through YOLO model with tracking
-                try:
-                    results = self.model.track(
-                        source=frame,
-                        tracker=self.tracker,
-                        conf=self.conf,
-                        iou=self.iou,
-                        persist=True
-                    )
-
-                    # Update rose count tracking if results are valid
-                    if results and len(results) > 0 and hasattr(results[0], 'boxes'):
-                        self.track_detections(results[0].boxes)
-                        annotated_frame = results[0].plot()
-                    else:
-                        annotated_frame = frame  # Use original frame if detection fails
-                        print("No detection results for this frame")
-
-                except Exception as e:
-                    print(f"Warning: Detection error: {str(e)}")
-                    annotated_frame = frame  # Use original frame if detection fails
-                
-                # Always yield a frame, whether it's annotated or original
-                yield annotated_frame
+                processed_frame = self.process_single_frame(frame)
+                yield processed_frame
 
             print("Tracking stopped")
         except Exception as e:
             print(f"Error processing frame: {str(e)}")
         finally:
             self.stop_tracking()
+
+    def process_single_frame(self, frame):
+        """Process a single frame through the tracking model"""
+        if frame is None:
+            print("Received None frame")
+            return frame
+            
+        try:
+            results = self.model.track(
+                source=frame,
+                tracker=self.tracker,
+                conf=self.conf,
+                iou=self.iou,
+                persist=True
+            )
+
+            # Update rose count tracking if results are valid
+            if results and len(results) > 0 and hasattr(results[0], 'boxes'):
+                self.track_detections(results[0].boxes)
+                annotated_frame = results[0].plot()
+            else:
+                annotated_frame = frame  # Use original frame if detection fails
+                print("No detection results for this frame")
+
+        except Exception as e:
+            print(f"Warning: Detection error: {str(e)}")
+            annotated_frame = frame  # Use original frame if detection fails
+        
+        return annotated_frame
 
     def stop_tracking(self):
         """Stop tracking and release resources."""
@@ -112,4 +119,4 @@ class RealtimeTrackingService(BaseTrackingService):
         return {
             "count": self.latest_count,
             "timestamp": self.last_count_update
-        } 
+        }
