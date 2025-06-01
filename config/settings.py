@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import torch
 
 class Settings:
     """
@@ -35,7 +36,10 @@ class Settings:
         # Allowed file extensions
         self.ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp'}
         self.ALLOWED_VIDEO_EXTENSIONS = {'.mp4', '.avi', '.mov', '.mkv'}
-        
+       
+        # Device configuration (CPU or GPU)
+        self.DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         # Create necessary directories
         self._create_directories()
     
