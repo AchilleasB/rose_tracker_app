@@ -75,10 +75,14 @@ class RealtimeTrackingController:
             _, buffer = cv2.imencode('.jpg', processed_frame)
             processed_image = base64.b64encode(buffer).decode('utf-8')
             
+            # Get latest count and FPS
+            count_info = self.realtime_tracker_service.get_latest_count()
+            
             return jsonify({
                 "status": "success",
                 "image": f"data:image/jpeg;base64,{processed_image}",
-                "count": self.realtime_tracker_service.get_latest_count()
+                "count": count_info["count"],
+                "fps": count_info["fps"]
             })
             
         except Exception as e:
@@ -94,9 +98,9 @@ class RealtimeTrackingController:
             return jsonify({"status": "error", "message": str(e)}), 500
 
     def realtime_view(self):
-        """Test view with embedded video stream"""
+        """Render the realtime tracking view"""
         return render_template('realtime_stream.html')
 
     def get_latest_count(self):
-        """Endpoint to get the latest rose count"""
+        """Get the latest rose count and FPS"""
         return jsonify(self.realtime_tracker_service.get_latest_count())

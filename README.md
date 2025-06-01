@@ -1,16 +1,41 @@
 # Rose Tracker Application
 
-A computer vision application for tracking and counting roses in images, videos, and real-time camera feeds using YOLOv11 and BoT-SORT tracking algorithm.
+A computer vision application for tracking and counting roses in images, videos, and real-time camera feeds using YOLOv11 and an improved IoU-based tracking algorithm.
 
 ## Features
 
 - Image tracking: Process and annotate images with rose detections
 - Video tracking: Track roses in video files with frame-by-frame analysis
 - Real-time tracking: Live rose tracking using webcam or camera feed
-  - Supports browser-based camera access for remote deployment
+  - Advanced IoU-based tracking for reliable rose identification
+  - Real-time FPS display and performance monitoring
+  - Unique rose counting with ID persistence
+  - Modern, responsive UI with status indicators
+  - Browser-based camera access for remote deployment
   - Works with containerized environments like Docker
 - Model retraining: Capability to retrain the model with new data
-- Unique rose counting: Track and count unique roses across frames
+- Unique rose counting: Track and count unique roses across frames with improved tracking algorithm
+
+## Key Improvements
+
+- **Enhanced Tracking Algorithm**: 
+  - IoU-based tracking for more reliable rose identification
+  - Active and inactive rose state management
+  - Improved handling of occlusions and temporary disappearances
+  - Configurable tracking timeouts for better accuracy
+
+- **Real-time Performance**:
+  - Live FPS counter showing processing speed
+  - Visual feedback with rose IDs and bounding boxes
+  - Status indicators for camera and tracking state
+  - Error handling and user feedback
+
+- **User Interface**:
+  - Modern, responsive design
+  - Real-time status updates
+  - Visual feedback for tracking state
+  - Error messages and loading indicators
+  - Smooth animations and transitions
 
 ## Prerequisites
 
@@ -18,6 +43,7 @@ A computer vision application for tracking and counting roses in images, videos,
 - OpenCV
 - Ultralytics YOLOv11
 - Modern web browser with camera access capabilities (for browser-based tracking)
+- CUDA support recommended for better performance (optional)
 
 ## Installation
 
@@ -32,7 +58,7 @@ cd rose_tracker_app
 2. Build and Run the Docker image:
 ```bash
 # Build
-docker-compose --build
+docker-compose build
 
 # Run
 docker-compose up
@@ -69,23 +95,38 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## Real-time Tracking Modes
+## Real-time Tracking Features
 
-The application supports two modes for real-time tracking:
+The application provides advanced real-time tracking capabilities:
 
-### 1. Direct Camera Access (Local Development)
+### 1. Browser-based Camera Access
 
-When running locally, the application can directly access your machine's camera using OpenCV. This mode is not suitable for containerized or server deployments.
+- Secure camera access through browser permissions
+- Real-time frame processing with server-side detection
+- Efficient frame transmission using base64 encoding
+- Automatic error handling and recovery
 
-### 2. Browser-based Camera Access (Remote/Docker Deployment)
+### 2. Tracking Features
 
-For server or Docker deployments, the application uses browser-based camera access:
-- The browser asks for permission to use the camera
-- Camera frames are sent to the server for processing via secure HTTP requests
-- Processed frames with tracking results are returned to the browser
-- No direct camera access from the server is needed
+- **Rose Identification**:
+  - Unique ID assignment for each detected rose
+  - Persistent tracking across frames
+  - Handling of temporary occlusions
+  - Automatic cleanup of inactive roses
 
-This mode allows the application to run in environments where direct camera access is restricted or not possible.
+- **Performance Monitoring**:
+  - Real-time FPS display
+  - Processing status indicators
+  - Error reporting and recovery
+  - Resource usage optimization
+
+- **User Interface**:
+  - Live video feed with annotations
+  - Rose count display
+  - Processing FPS counter
+  - Status indicators
+  - Error messages
+  - Loading states
 
 ## Project Structure
 
@@ -93,20 +134,66 @@ This mode allows the application to run in environments where direct camera acce
 rose_tracker_app/
 ├── api/
 │   └── controllers/         # API endpoints and request handling
+│       ├── image_tracking_controller.py
+│       ├── video_tracking_controller.py
+│       ├── realtime_tracking_controller.py
+│       └── model_retraining_controller.py
 │
 ├── config/
-│   └── settings.py         # Application configuration
+│   ├── settings.py         # Application configuration
+│   └── yolo_botsort.py     # Tracking algorithm configuration
 │
 ├── data/
 │   └── best.pt            # Pre-trained YOLO model
 │
 ├── src/
 │   ├── models/            # Model-related code
+│   │   └── rose_tracker.py
 │   ├── services/          # Core tracking services
+│   │   ├── tracking_service/
+│   │   │   ├── base_tracking_service.py
+│   │   │   ├── image_tracking_service.py
+│   │   │   ├── video_tracking_service.py
+│   │   │   └── realtime_tracking_service.py
+│   │   └── training_service/
+│   │       └── model_training_service.py
 │   └── utils/             # Utility functions
+│       ├── file_handler.py
+│       └── tracking_processor.py
 │
-├── app.py                 # Main application entry point
-├── docker-compose.yml     #  
-├── Dockerfile            # Docker configuration
+├── templates/             # HTML templates
+│   └── realtime_stream.html
+│
+├── app.py                # Main application entry point
+├── docker-compose.yml    # Docker Compose configuration
+├── Dockerfile.dev        # Development Docker configuration
 └── requirements.txt      # Python dependencies
 ```
+
+## Usage
+
+1. **Starting the Application**:
+   - Launch the application using Docker or local setup
+   - Access the web interface at http://localhost:5000
+   - Navigate to the real-time tracking page
+
+2. **Real-time Tracking**:
+   - Click "Start Camera" to begin tracking
+   - Allow camera access when prompted
+   - Monitor the live feed with rose detections
+   - View real-time FPS and rose count
+   - Click "Stop Camera" to end tracking
+
+3. **Tracking Features**:
+   - Each detected rose is assigned a unique ID
+   - IDs persist across frames for consistent tracking
+   - Inactive roses are automatically managed
+   - Performance metrics are displayed in real-time
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
