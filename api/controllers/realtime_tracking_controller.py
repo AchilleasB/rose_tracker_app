@@ -16,70 +16,9 @@ class RealtimeTrackingController:
 
     def _register_routes(self):
         self.blueprint.route("/track/realtime/stream", methods=["POST"])(self.realtime_stream)
-        self.blueprint.route("/track/realtime/webcam", methods=["POST"])(self.process_webcam_frame)
         self.blueprint.route("/track/realtime/stop", methods=["POST"])(self.stop_stream)
         self.blueprint.route("/track/realtime", methods=["GET"])(self.realtime_view)
         self.blueprint.route("/track/realtime/count", methods=["GET"])(self.get_latest_count)
-
-
-    def process_webcam_frame(self):
-        """Process a single frame from the webcam"""
-        try:
-            # Get the base64 encoded image from the request
-            image_data = request.json.get('image', '')
-            if not image_data:
-                return jsonify({"status": "error", "message": "No image data received"}), 400
-
-            # Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-                
-            # Decode the base64 image
-            image_bytes = base64.b64decode(image_data)
-            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            frame = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            
-            if frame is None:
-                return jsonify({"status": "error", "message": "Failed to decode image"}), 400
-                
-            # Process the frame with the tracking service
-            processed_frame = self.realtime_tracker_service.process_single_frame(frame)
-            
-            # Encode the processed frame to send back
-            _, buffer = cv2.imencode('.jpg', processed_frame)
-            processed_image = base64.b64encode(buffer).decode('utf-8')
-            
-            # Get latest count and FPS
-            count_info = self.realtime_tracker_service.get_latest_count()
-            
-            return jsonify({
-                "status": "success",
-                "image": f"data:image/jpeg;base64,{processed_image}",
-                "count": count_info["count"],
-                "fps": count_info["fps"]
-            })
-            
-        except Exception as e:
-            print(f"Error processing webcam frame: {str(e)}")
-            return jsonify({"status": "error", "message": str(e)}), 500
-
-    def stop_stream(self):
-        """Stop the video stream and release resources"""
-        try:
-            self.realtime_tracker_service.stop_tracking()
-            return jsonify({"status": "success", "message": "Stream stopped"})
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
-
-    def realtime_view(self):
-        """Render the realtime tracking view"""
-        return render_template('realtime_stream.html')
-
-    def get_latest_count(self):
-        """Get the latest rose count and FPS"""
-        return jsonify(self.realtime_tracker_service.get_latest_count())
-    
-    ### ALTERNATIVE IMPLEMENTATION
 
     def realtime_stream(self):
         """Stream endpoint that provides the video feed using YOLO's built-in tracking"""
@@ -135,3 +74,20 @@ class RealtimeTrackingController:
                 
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
+        
+        
+    def stop_stream(self):
+        """Stop the video stream and release resources"""
+        try:
+            self.realtime_tracker_service.stop_tracking()
+            return jsonify({"status": "success", "message": "Stream stopped"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    def realtime_view(self):
+        """Render the realtime tracking view"""
+        return render_template('realtime_stream.html')
+
+    def get_latest_count(self):
+        """Get the latest rose count and FPS"""
+        return jsonify(self.realtime_tracker_service.get_latest_count())
