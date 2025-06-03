@@ -13,10 +13,19 @@
             max-width: 1200px;
             margin: 0 auto;
             text-align: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         h1 {
             color: #333;
             margin-bottom: 20px;
+        }
+        h2 {
+            color: #444;
+            margin-bottom: 20px;
+            font-size: 1.5em;
         }
         .stream-container {
             background: #fff;
@@ -127,6 +136,15 @@
             margin: 10px 0;
             display: none;
         }
+        #streamRoseCount .status-value {
+            color: #2196F3;
+        }
+        #streamFpsValue .status-value {
+            color: #4CAF50;
+        }
+        #streamStatus .status-value {
+            color: #FF9800;
+        }
     </style>
 </head>
 <body>
@@ -137,6 +155,7 @@
             <img id="videoStream" alt="Real-time Rose Tracking">
             <div class="camera-overlay" id="fpsCounter">FPS: 0</div>
         </div>
+        
         <div class="loader" id="loader"></div>
         <div class="error-message" id="errorMessage"></div>
         
@@ -161,6 +180,34 @@
         </div>
     </div>
 
+    <div class="container" style="margin-top: 40px; border-top: 2px solid #ddd; padding-top: 40px;">
+        <h2>Streaming Implementation</h2>
+        <div class="stream-container">
+            <img id="streamVideo" alt="Streaming Rose Tracking">
+            <div class="camera-overlay" id="streamFpsCounter">FPS: 0</div>
+        </div>
+        
+        <div class="status-container">
+            <div class="status-box" id="streamRoseCount">
+                <div class="status-label">Total Roses (Stream)</div>
+                <div class="status-value" id="streamCount">0</div>
+            </div>
+            <div class="status-box" id="streamFpsValue">
+                <div class="status-label">Stream FPS</div>
+                <div class="status-value" id="streamFps">0</div>
+            </div>
+            <div class="status-box" id="streamStatus">
+                <div class="status-label">Stream Status</div>
+                <div class="status-value" id="streamStatusValue">Stream Inactive</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="startStreamButton" onclick="startStream()" style="background-color: #2196F3; color: white;">Start Stream</button>
+            <button id="stopStreamButton" onclick="stopStream()" disabled style="background-color: #f44336; color: white;">Stop Stream</button>
+        </div>
+    </div>
+
     <script>
     // Global variables
     let localStream = null;
@@ -170,6 +217,20 @@
     const canvasContext = canvas.getContext('2d');
     let isTracking = false;
     let processingFrame = false;
+
+    // Add streaming implementation variables
+    let streamInterval = null;
+    let streamFps = 0;
+    let lastStreamFrameTime = 0;
+    const streamVideoElement = document.getElementById('streamVideo');
+    const streamFpsCounter = document.getElementById('streamFpsCounter');
+    let isStreaming = false;
+    let streamLocalStream = null;  // Add separate stream for alternative implementation
+
+    // Add new streaming status variables
+    const streamStatusElement = document.getElementById('streamStatusValue');
+    const streamCountElement = document.getElementById('streamCount');
+    const streamFpsElement = document.getElementById('streamFps');
 
     // Start the camera
     async function startCamera() {
@@ -234,6 +295,10 @@
         document.getElementById('count').textContent = '0';
         document.getElementById('fps').textContent = '0';
         document.getElementById('fpsCounter').textContent = 'FPS: 0';
+
+        if (isStreaming) {
+            stopStream();
+        }
     }
 
     // Process and send video frames
@@ -309,8 +374,8 @@
     }
 
     // Helper functions for UI updates
-    function updateStatus(message, type) {
-        const statusElement = document.getElementById('status');
+    function updateStatus(message, type, isStream = false) {
+        const statusElement = isStream ? streamStatusElement : document.getElementById('status');
         statusElement.textContent = message;
         statusElement.className = 'status-value ' + type;
     }
@@ -333,10 +398,207 @@
         document.getElementById('errorMessage').style.display = 'none';
     }
 
+    // ### ALTERNATIVE IMPLEMENTATION WITH YOLO TRACKING###
+    // Start the streaming implementation
+    async function startStream() {
+        try {
+            showLoader();
+            updateStatus('Starting stream...', 'warning', true);
+            hideError();
+
+            // Get camera access for streaming implementation
+            streamLocalStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'environment'
+                }
+            });
+
+            // Create a video element for the stream
+            const streamVideo = document.createElement('video');
+            streamVideo.srcObject = streamLocalStream;
+            streamVideo.autoplay = true;
+            streamVideo.muted = true;
+            streamVideo.playsInline = true;  // Add this for mobile devices
+            streamVideo.style.display = 'none';  // Hide the video element
+            document.body.appendChild(streamVideo);
+
+            // Wait for video to be ready and ensure it's playing
+            await new Promise((resolve, reject) => {
+                streamVideo.onloadedmetadata = () => {
+                    // Explicitly play the video
+                    streamVideo.play()
+                        .then(() => {
+                            console.log('Video started playing');
+                            resolve();
+                        })
+                        .catch(error => {
+                            console.error('Error playing video:', error);
+                            reject(error);
+                        });
+                };
+                streamVideo.onerror = (error) => {
+                    console.error('Video error:', error);
+                    reject(error);
+                };
+            });
+
+            // Verify video is actually playing
+            if (streamVideo.paused) {
+                throw new Error('Video failed to start playing');
+            }
+
+            // Start the stream processing
+            isStreaming = true;
+            document.getElementById('startStreamButton').disabled = true;
+            document.getElementById('stopStreamButton').disabled = false;
+            
+            // Start frame processing with the stream video
+            processStreamFrame(streamVideo);
+            
+            hideLoader();
+            updateStatus('Stream Active', 'active', true);
+        } catch (error) {
+            console.error('Error starting stream:', error);
+            showError(`Stream Error: ${error.message}`);
+            updateStatus('Stream Error', 'error', true);
+            hideLoader();
+        }
+    }
+
+    // Process frames for streaming implementation
+    async function processStreamFrame(streamVideo) {
+        if (!isStreaming) return;
+
+        try {
+            // Sync canvas size with stream video
+            canvas.width = streamVideo.videoWidth;
+            canvas.height = streamVideo.videoHeight;
+            canvasContext.drawImage(streamVideo, 0, 0);
+
+            // Convert frame to blob
+            const blob = await new Promise((resolve) => {
+                canvas.toBlob(resolve, 'image/jpeg', 0.8);
+            });
+
+            if (!blob) {
+                console.warn('Failed to create blob from canvas');
+                requestAnimationFrame(() => processStreamFrame(streamVideo));
+                return;
+            }
+
+            // Convert blob to base64
+            const base64Image = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+
+            // Send frame to server
+            const response = await fetch('/track/realtime/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    image: base64Image
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                // Update image element with processed frame
+                streamVideoElement.src = result.image;
+                
+                // Update counters
+                streamCountElement.textContent = result.count;
+                streamFpsElement.textContent = result.fps.toFixed(1);
+                streamFpsCounter.textContent = `FPS: ${result.fps.toFixed(1)}`;
+                
+                // Calculate and update stream FPS
+                const now = performance.now();
+                const elapsed = now - lastStreamFrameTime;
+                streamFps = 1000 / elapsed;
+                lastStreamFrameTime = now;
+
+                // Log frame processing details
+                console.log('Frame processed successfully:', {
+                    frameSize: `${streamVideo.videoWidth}x${streamVideo.videoHeight}`,
+                    fps: result.fps,
+                    count: result.count,
+                    trackedRoses: result.tracked_roses?.length || 0
+                });
+            } else {
+                console.warn('Stream processing error:', result.message);
+            }
+        } catch (error) {
+            console.error('Error in stream frame processing:', error);
+            showError('Stream Processing Error: ' + error.message);
+        } finally {
+            if (isStreaming) {
+                requestAnimationFrame(() => processStreamFrame(streamVideo));
+            }
+        }
+    }
+
+    // Stop the streaming implementation
+    async function stopStream() {
+        isStreaming = false;
+
+        // Stop the camera stream
+        if (streamLocalStream) {
+            streamLocalStream.getTracks().forEach(track => track.stop());
+            streamLocalStream = null;
+        }
+
+        // Remove the temporary video element
+        const streamVideo = document.querySelector('video[srcObject]');
+        if (streamVideo) {
+            streamVideo.remove();
+        }
+
+        if (streamVideoElement) {
+            streamVideoElement.src = '';
+        }
+
+        streamFps = 0;
+        streamFpsCounter.textContent = 'FPS: 0';
+        streamFpsElement.textContent = '0';
+        streamCountElement.textContent = '0';
+
+        // Enable/disable buttons
+        document.getElementById('startStreamButton').disabled = false;
+        document.getElementById('stopStreamButton').disabled = true;
+
+        // Stop the stream on the server
+        try {
+            const response = await fetch('/track/realtime/stop', {
+                method: 'POST'
+            });
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error stopping stream:', error);
+            showError('Error stopping stream: ' + error.message);
+        }
+
+        updateStatus('Stream Stopped', 'inactive', true);
+    }
+
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {
         if (isTracking) {
             stopCamera();
+        }
+        if (isStreaming) {
+            stopStream();
         }
     });
     </script>
