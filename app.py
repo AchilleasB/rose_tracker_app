@@ -6,7 +6,7 @@ from api.controllers import (
     ImageTrackingController,
     VideoTrackingController,
     RealtimeTrackingController,
-    ModelRetrainingController
+    ModelTrainingController
 )
 from config.yolo_botsort import download_and_modify_botsort
 from config.database import db
@@ -31,13 +31,13 @@ def create_app():
     image_tracking_controller = ImageTrackingController()
     video_tracking_controller = VideoTrackingController()
     realtime_tracking_controller = RealtimeTrackingController()
-    model_retraining_controller = ModelRetrainingController()
+    model_training_controller = ModelTrainingController()
 
     # Register Blueprints
     app.register_blueprint(image_tracking_controller.blueprint)
     app.register_blueprint(video_tracking_controller.blueprint)
     app.register_blueprint(realtime_tracking_controller.blueprint)
-    app.register_blueprint(model_retraining_controller.blueprint)
+    app.register_blueprint(model_training_controller.blueprint)
 
     return app
 

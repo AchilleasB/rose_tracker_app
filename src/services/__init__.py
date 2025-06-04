@@ -8,13 +8,18 @@ from .tracking_service import (
     VideoTrackingService,
     RealtimeTrackingService
 )
-from .training_service import ModelRetrainerService
+
+from .training_service import (
+    ModelTrainingService,
+    DatasetService
+)
 
 __all__ = [
     'BaseTrackingService',
     'ImageTrackingService',
     'VideoTrackingService',
     'RealtimeTrackingService',
-    'ModelRetrainerService'
+    'ModelTrainingService',
+    'DatasetService'
 ]       
 

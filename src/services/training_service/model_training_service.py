@@ -1,9 +1,5 @@
 """
-Model Retraining Service
-
-This module provides functionality for retraining the rose detection model
-using user-provided annotations. It handles the management of model versions,
-training data organization, and model retraining process.
+Model Training Service  provides functionality for training a detection model based on YOLO11 pretrained model
 """
 
 import os
@@ -12,188 +8,36 @@ import json
 import yaml
 import cv2
 import torch
-import random
 from datetime import datetime
 from ultralytics import YOLO
 from config.settings import Settings
 from src.utils.training_utils import TrainingUtils
+from src.services.training_service.dataset_service import DatasetService
 
-class ModelRetrainerService:
-    """Service class for model retraining operations."""
+class ModelTrainingService:
+    """Service class for model training operations."""
     settings = Settings()
 
     def __init__(self):
-        """Initialize the model retrainer service."""
+        """Initialize the model training service."""
         # Model paths
         self.models_dir = self.settings.MODELS_DIR
         self.default_model = self.settings.DEFAULT_MODEL
         self.metadata_file = self.settings.MODEL_METADATA_FILE
         
-        # Dataset paths
-        self.data_dir = self.settings.DATA_DIR
-        self.temp_dir = os.path.join(self.data_dir, 'temp')
-        self.latest_dataset_dir = os.path.join(self.data_dir, 'latest_dataset')
-        self.training_outputs_dir = os.path.join(self.data_dir, 'training_outputs')
-        
-        # Create only the essential directories
-        os.makedirs(self.models_dir, exist_ok=True)
-        os.makedirs(self.data_dir, exist_ok=True)
-        os.makedirs(self.temp_dir, exist_ok=True)
-        os.makedirs(self.latest_dataset_dir, exist_ok=True)
+        # Training outputs directory
+        self.training_outputs_dir = os.path.join(self.settings.DATA_DIR, 'training_outputs')
         os.makedirs(self.training_outputs_dir, exist_ok=True)
+        os.makedirs(self.models_dir, exist_ok=True)
 
-    def save_annotation(self, original_image_path, annotation_data):
-        """Save multiple annotations for an original image in YOLO format."""
+    def train_model(self):
+        """Train the model using the prepared dataset."""
+        # Initialize dataset service to get dataset info
+        dataset_service = DatasetService()
         
-        # Find the original image file
-        image_filename = original_image_path
-        original_image_full_path = os.path.join(self.settings.UPLOADS_DIR, 'images', image_filename)
-        
-        if not os.path.exists(original_image_full_path):
-            raise FileNotFoundError(f"Original image not found: {original_image_full_path}")
-
-        # Validate annotation structure
-        if 'boxes' not in annotation_data:
-            raise ValueError("No boxes found in annotation data")
-        
-        if 'image_dimensions' not in annotation_data:
-            raise ValueError("No image dimensions found in annotation data")
-
-        img_width = annotation_data['image_dimensions']['width']
-        img_height = annotation_data['image_dimensions']['height']
-
-        # Process all boxes in the annotation
-        all_annotations = []
-        for i, box in enumerate(annotation_data['boxes']):
-            try:
-                # Validate annotation size (minimum 10 pixels)
-                if box['width'] < 10 or box['height'] < 10:
-                    print(f"Skipping small annotation {i+1}: {box['width']}x{box['height']} pixels")
-                    continue
-                    
-                # Convert to YOLO normalized format
-                normalized_annotation = TrainingUtils.normalize_annotation(
-                    box['x_center'],
-                    box['y_center'],
-                    box['width'],
-                    box['height'],
-                    img_width,
-                    img_height
-                )
-                all_annotations.append(normalized_annotation)
-                
-            except Exception as e:
-                print(f"Error processing annotation {i+1}: {str(e)}")
-                continue
-
-        if not all_annotations:
-            raise ValueError("No valid annotations to save (all were too small or invalid)")
-
-        # Get existing annotations from previous saves
-        label_filename = os.path.splitext(image_filename)[0] + '.txt'
-        existing_label_path = os.path.join(self.temp_dir, 'labels', label_filename)
-        existing_annotations = TrainingUtils.read_existing_annotations(existing_label_path)
-
-        # Save original image to temp directory if not exists
-        temp_images_dir = os.path.join(self.temp_dir, 'images')
-        temp_labels_dir = os.path.join(self.temp_dir, 'labels')
-        os.makedirs(temp_images_dir, exist_ok=True)
-        os.makedirs(temp_labels_dir, exist_ok=True)
-        
-        temp_image_path = os.path.join(temp_images_dir, image_filename)
-        if not os.path.exists(temp_image_path):
-            shutil.copy2(original_image_full_path, temp_image_path)
-        
-        # Combine existing and new annotations
-        combined_annotations = existing_annotations + all_annotations
-        
-        # Save all annotations to one label file
-        temp_label_path = os.path.join(temp_labels_dir, label_filename)
-        TrainingUtils.save_annotations(temp_label_path, combined_annotations)
-        
-        return {
-            "original_image_path": original_image_full_path,
-            "temp_image_path": temp_image_path,
-            "temp_label_path": temp_label_path,
-            "new_annotations_count": len(all_annotations),
-            "total_annotations_count": len(combined_annotations),
-            "annotations": {
-                "new": all_annotations,
-                "existing": existing_annotations,
-                "combined": combined_annotations
-            }
-        }
-
-    def prepare_dataset(self):
-        """Prepare the dataset by splitting into train and val sets"""
-        temp_images_dir = os.path.join(self.temp_dir, 'images')
-        temp_labels_dir = os.path.join(self.temp_dir, 'labels')
-        
-        if not os.path.exists(temp_images_dir) or not os.path.exists(temp_labels_dir):
-            raise ValueError("No annotations found. Please add some annotations before preparing the dataset.")
-            
-        # Get all image files
-        image_files = [f for f in os.listdir(temp_images_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        if not image_files:
-            raise ValueError("No images found in the temporary directory.")
-            
-        # Verify that each image has a corresponding label file
-        valid_image_files = []
-        for image_file in image_files:
-            label_file = os.path.splitext(image_file)[0] + '.txt'
-            label_path = os.path.join(temp_labels_dir, label_file)
-            if os.path.exists(label_path):
-                # Verify label file is not empty
-                if os.path.getsize(label_path) > 0:
-                    valid_image_files.append(image_file)
-                else:
-                    print(f"Warning: Empty label file for {image_file}")
-            else:
-                print(f"Warning: No label file found for {image_file}")
-        
-        if not valid_image_files:
-            raise ValueError("No valid image-label pairs found. Please ensure each image has a corresponding non-empty label file.")
-            
-        # Shuffle the files for random split
-        random.shuffle(valid_image_files)
-        
-        # Calculate split index (80% train, 20% val)
-        split_idx = int(len(valid_image_files) * 0.8)
-        train_files = valid_image_files[:split_idx]
-        val_files = valid_image_files[split_idx:]
-        
-        # Prepare dataset structure
-        train_dir, val_dir = TrainingUtils.prepare_dataset_structure(self.latest_dataset_dir, self.temp_dir)
-        
-        # Copy files to their respective directories
-        for files, target_dir in [(train_files, train_dir), (val_files, val_dir)]:
-            for image_file in files:
-                # Copy image
-                src_image = os.path.join(temp_images_dir, image_file)
-                dst_image = os.path.join(target_dir, 'images', image_file)
-                shutil.copy2(src_image, dst_image)
-                
-                # Copy corresponding label
-                label_file = os.path.splitext(image_file)[0] + '.txt'
-                src_label = os.path.join(temp_labels_dir, label_file)
-                dst_label = os.path.join(target_dir, 'labels', label_file)
-                shutil.copy2(src_label, dst_label)
-        
-        # Create dataset.yaml
-        yaml_path = TrainingUtils.create_dataset_yaml(self.latest_dataset_dir)
-        
-        return {
-            "dataset_dir": self.latest_dataset_dir,
-            "yaml_path": yaml_path,
-            "train_count": len(train_files),
-            "val_count": len(val_files)
-        }
-
-    def retrain_model(self):
-        """Retrain the model using the collected annotations"""
         # First prepare the dataset
         try:
-            dataset_info = self.prepare_dataset()
+            dataset_info = dataset_service.prepare_dataset()
             print(f"Dataset prepared successfully:")
             print(f"- Training images: {dataset_info['train_count']}")
             print(f"- Validation images: {dataset_info['val_count']}")
@@ -214,7 +58,7 @@ class ModelRetrainerService:
         os.makedirs(training_output_dir, exist_ok=True)
         
         print(f"Starting model training...")
-        # Retrain the model
+        # Train the model
         results = model.train(
             data=dataset_info['yaml_path'],
             epochs=20,
@@ -266,20 +110,38 @@ class ModelRetrainerService:
         }
 
     def list_models(self):
-        """List all available models with their metadata"""
-        metadata = TrainingUtils.load_model_metadata(self.metadata_file)
-        return {
-            "default_model": self.default_model,
-            "retrained_models": metadata['models']
-        }
+        """List all available .pt model files in the models directory."""
+        try:
+            # Get all .pt files in the models directory
+            model_files = [f for f in os.listdir(self.models_dir) if f.endswith('.pt')]
+            
+            # Sort files by creation time (newest first)
+            model_files.sort(key=lambda x: os.path.getctime(os.path.join(self.models_dir, x)), reverse=True)
+            
+            return model_files
+        except Exception as e:
+            print(f"Error listing models: {str(e)}")
+            return []
 
-    def get_model_path(self, model_name):
-        """Get the path for a specific model"""
+    def select_model(self, model_name):
+        """Select a model as the default model and update settings."""
         if model_name == 'default':
-            return self.default_model
-            
-        model_path = os.path.join(self.models_dir, model_name)
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model {model_name} not found")
-            
-        return model_path
+            # Reset to original default model
+            model_path = self.settings.ORIGINAL_DEFAULT_MODEL
+        else:
+            # Get the full path of the selected model
+            model_path = os.path.join(self.models_dir, model_name)
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Model {model_name} not found")
+        
+        # Update the settings with the new default model
+        self.settings.update_default_model(model_path)
+        
+        # Update the instance variable
+        self.default_model = model_path
+        
+        return {
+            "model_name": model_name,
+            "model_path": model_path,
+            "message": f"Model {model_name} set as default"
+        }
