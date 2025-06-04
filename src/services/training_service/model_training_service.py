@@ -42,61 +42,85 @@ class ModelRetrainerService:
         os.makedirs(self.latest_dataset_dir, exist_ok=True)
         os.makedirs(self.training_outputs_dir, exist_ok=True)
 
-    def save_annotation(self, tracked_image_path, annotation_data):
-        """Save a new annotation for an existing image in YOLO format.
-        """
-        if not os.path.exists(tracked_image_path):
-            raise FileNotFoundError("Tracked image not found")
+    def save_annotation(self, original_image_path, annotation_data):
+        """Save multiple annotations for an original image in YOLO format."""
+        
+        # Find the original image file
+        image_filename = original_image_path
+        original_image_full_path = os.path.join(self.settings.UPLOADS_DIR, 'images', image_filename)
+        
+        if not os.path.exists(original_image_full_path):
+            raise FileNotFoundError(f"Original image not found: {original_image_full_path}")
 
-        # Get the original image from uploads
-        image_filename = os.path.basename(tracked_image_path)
-        original_image_path = os.path.join(self.settings.UPLOADS_DIR, 'images', image_filename)
-        if not os.path.exists(original_image_path):
-            raise FileNotFoundError("Original image not found in uploads")
+        # Validate annotation structure
+        if 'boxes' not in annotation_data:
+            raise ValueError("No boxes found in annotation data")
+        
+        if 'image_dimensions' not in annotation_data:
+            raise ValueError("No image dimensions found in annotation data")
 
-        # Validate annotation
-        img_width, img_height = TrainingUtils.validate_annotation(original_image_path, annotation_data)
+        img_width = annotation_data['image_dimensions']['width']
+        img_height = annotation_data['image_dimensions']['height']
 
-        # Convert new annotation to YOLO format (normalized)
-        new_annotation = TrainingUtils.normalize_annotation(
-            annotation_data['x_center'],
-            annotation_data['y_center'],
-            annotation_data['width'],
-            annotation_data['height'],
-            img_width,
-            img_height
-        )
+        # Process all boxes in the annotation
+        all_annotations = []
+        for i, box in enumerate(annotation_data['boxes']):
+            try:
+                # Validate annotation size (minimum 10 pixels)
+                if box['width'] < 10 or box['height'] < 10:
+                    print(f"Skipping small annotation {i+1}: {box['width']}x{box['height']} pixels")
+                    continue
+                    
+                # Convert to YOLO normalized format
+                normalized_annotation = TrainingUtils.normalize_annotation(
+                    box['x_center'],
+                    box['y_center'],
+                    box['width'],
+                    box['height'],
+                    img_width,
+                    img_height
+                )
+                all_annotations.append(normalized_annotation)
+                
+            except Exception as e:
+                print(f"Error processing annotation {i+1}: {str(e)}")
+                continue
 
-        # Get existing annotations
+        if not all_annotations:
+            raise ValueError("No valid annotations to save (all were too small or invalid)")
+
+        # Get existing annotations from previous saves
         label_filename = os.path.splitext(image_filename)[0] + '.txt'
-        existing_label_path = os.path.join(os.path.dirname(tracked_image_path), 'labels', label_filename)
+        existing_label_path = os.path.join(self.temp_dir, 'labels', label_filename)
         existing_annotations = TrainingUtils.read_existing_annotations(existing_label_path)
 
-        # Save to temporary directory for training
+        # Save original image to temp directory if not exists
         temp_images_dir = os.path.join(self.temp_dir, 'images')
         temp_labels_dir = os.path.join(self.temp_dir, 'labels')
         os.makedirs(temp_images_dir, exist_ok=True)
         os.makedirs(temp_labels_dir, exist_ok=True)
         
-        # Copy original image to temp directory if not exists
         temp_image_path = os.path.join(temp_images_dir, image_filename)
         if not os.path.exists(temp_image_path):
-            shutil.copy2(original_image_path, temp_image_path)
+            shutil.copy2(original_image_full_path, temp_image_path)
         
-        # Save all annotations to temp labels
+        # Combine existing and new annotations
+        combined_annotations = existing_annotations + all_annotations
+        
+        # Save all annotations to one label file
         temp_label_path = os.path.join(temp_labels_dir, label_filename)
-        all_annotations = existing_annotations + [new_annotation]
-        TrainingUtils.save_annotations(temp_label_path, all_annotations)
+        TrainingUtils.save_annotations(temp_label_path, combined_annotations)
         
         return {
-            "original_image_path": original_image_path,
-            "tracked_image_path": tracked_image_path,
+            "original_image_path": original_image_full_path,
             "temp_image_path": temp_image_path,
             "temp_label_path": temp_label_path,
-            "total_annotations": len(all_annotations),
+            "new_annotations_count": len(all_annotations),
+            "total_annotations_count": len(combined_annotations),
             "annotations": {
-                "new": new_annotation,
-                "existing": existing_annotations
+                "new": all_annotations,
+                "existing": existing_annotations,
+                "combined": combined_annotations
             }
         }
 
@@ -258,4 +282,4 @@ class ModelRetrainerService:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model {model_name} not found")
             
-        return model_path 
+        return model_path
