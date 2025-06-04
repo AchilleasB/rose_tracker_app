@@ -1,13 +1,13 @@
 # Rose Tracker Application
 
-A computer vision application for tracking and counting roses in images, videos, and real-time camera feeds using YOLOv11 and an improved IoU-based tracking algorithm.
+A computer vision application for tracking and counting roses in images, videos, and real-time camera feeds using YOLOv11 and BoTSORT tracking algorithm.
 
 ## Features
 
 - Image tracking: Process and annotate images with rose detections
 - Video tracking: Track roses in video files with frame-by-frame analysis
 - Real-time tracking: Live rose tracking using webcam or camera feed
-  - Advanced IoU-based tracking for reliable rose identification
+  - BoTSORT tracking algorithm for reliable rose identification
   - Real-time FPS display and performance monitoring
   - Unique rose counting with ID persistence
   - Modern, responsive UI with status indicators
@@ -18,11 +18,11 @@ A computer vision application for tracking and counting roses in images, videos,
 
 ## Key Improvements
 
-- **Enhanced Tracking Algorithm**: 
-  - IoU-based tracking for more reliable rose identification
-  - Active and inactive rose state management
+- **Advanced Tracking Algorithm**: 
+  - BoTSORT tracking for robust and accurate rose identification
+  - State-of-the-art multi-object tracking capabilities
   - Improved handling of occlusions and temporary disappearances
-  - Configurable tracking timeouts for better accuracy
+  - Configurable tracking parameters for optimal performance
 
 - **Real-time Performance**:
   - Live FPS counter showing processing speed
@@ -109,9 +109,9 @@ The application provides advanced real-time tracking capabilities:
 ### 2. Tracking Features
 
 - **Rose Identification**:
-  - Unique ID assignment for each detected rose
-  - Persistent tracking across frames
-  - Handling of temporary occlusions
+  - Unique ID assignment for each detected rose using BoTSORT
+  - Persistent tracking across frames with high accuracy
+  - Robust handling of occlusions and complex scenarios
   - Automatic cleanup of inactive roses
 
 - **Performance Monitoring**:
@@ -189,11 +189,3 @@ rose_tracker_app/
    - IDs persist across frames for consistent tracking
    - Inactive roses are automatically managed
    - Performance metrics are displayed in real-time
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
