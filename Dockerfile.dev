@@ -11,18 +11,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     FLASK_ENV=development \
     FLASK_DEBUG=1
 
-# Install system dependencies including OpenCV requirements
+# Install system dependencies including OpenCV requirements AND FFmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgl1-mesa-glx \
     libglib2.0-0 \
     libv4l-0 \
     v4l-utils \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt  
 
 # Install development dependencies
 RUN pip install \
