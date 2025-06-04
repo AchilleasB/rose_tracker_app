@@ -15,13 +15,13 @@ class Settings:
         self.TRAINING_OUTPUT_DIR = os.path.join(self.DATA_DIR, 'training_outputs')
         
         # Model paths and configuration
-        self.DEFAULT_MODEL = os.path.join(self.DATA_DIR, 'best.pt')
+        self.DEFAULT_MODEL = os.path.join(self.DATA_DIR, 'best_small.pt')
         self.MODEL_METADATA_FILE = os.path.join(self.MODELS_DIR, 'model_metadata.json')
         self.TRACKER_CONFIG_PATH = os.path.join(self.BASE_DIR, 'config', 'modified_botsort.yaml')
         self.BOTSORT_CONFIG_URL = "https://raw.githubusercontent.com/NirAharon/BoT-SORT/main/configs/botsort.yaml"
         
         # Tracking configuration
-        self.TRACKING_CONFIDENCE = 0.8
+        self.TRACKING_CONFIDENCE = 0.7
         self.TRACKING_IOU = 0.6
             
         # Upload directories
