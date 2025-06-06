@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 import torch
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Settings:
     """
@@ -39,20 +42,41 @@ class Settings:
        
         # Device configuration (CPU or GPU)
         self.DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        logger.info(f"Using device: {self.DEVICE}")
 
         # Create necessary directories
         self._create_directories()
+        
+        # Verify model files exist
+        self._verify_model_files()
     
     def _create_directories(self):
         """Create all necessary directories if they don't exist."""
-        directories = [
-            self.MODELS_DIR,
-            self.TRAINING_OUTPUT_DIR,
+        # Only create runtime directories, as data directory is included in container
+        runtime_directories = [
             self.UPLOAD_IMAGES_DIR,
             self.UPLOAD_VIDEOS_DIR,
             self.TRACKING_IMAGES_DIR,
             self.TRACKING_VIDEOS_DIR
         ]
         
-        for directory in directories:
-            os.makedirs(directory, exist_ok=True) 
+        for directory in runtime_directories:
+            try:
+                os.makedirs(directory, exist_ok=True)
+                logger.info(f"Ensured directory exists: {directory}")
+            except Exception as e:
+                logger.error(f"Failed to create directory {directory}: {str(e)}")
+                raise
+
+    def _verify_model_files(self):
+        """Verify that required model files exist."""
+        required_files = [
+            (self.DEFAULT_MODEL, "Default model"),
+            (self.TRACKER_CONFIG_PATH, "Tracker config")
+        ]
+        
+        for file_path, file_desc in required_files:
+            if not os.path.exists(file_path):
+                logger.error(f"{file_desc} not found at: {file_path}")
+                raise FileNotFoundError(f"{file_desc} not found at: {file_path}")
+            logger.info(f"Found {file_desc} at: {file_path}") 

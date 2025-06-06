@@ -1,15 +1,14 @@
 from datetime import timedelta
 import os
-from flask import Flask
-from flask_cors import CORS # type: ignore
+from flask import Flask, jsonify
+from flask_cors import CORS
 from api.controllers import (
     ImageTrackingController,
     VideoTrackingController,
     RealtimeTrackingController,
-    ModelRetrainingController
+    ModelTrainingController
 )
 from config.yolo_botsort import download_and_modify_botsort
-from config.database import db
 
 
 def create_app():
@@ -19,11 +18,6 @@ def create_app():
     # download the yolo-botsort tracker and modify to suit the project use case    
     download_and_modify_botsort()
 
-    # Initialize the database 
-    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///roses.db'
-    # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    # db.init_app(app)
-
     # Configure CORS
     CORS(app)
 
@@ -31,13 +25,13 @@ def create_app():
     image_tracking_controller = ImageTrackingController()
     video_tracking_controller = VideoTrackingController()
     realtime_tracking_controller = RealtimeTrackingController()
-    model_retraining_controller = ModelRetrainingController()
+    model_training_controller = ModelTrainingController()
 
     # Register Blueprints
     app.register_blueprint(image_tracking_controller.blueprint)
     app.register_blueprint(video_tracking_controller.blueprint)
     app.register_blueprint(realtime_tracking_controller.blueprint)
-    app.register_blueprint(model_retraining_controller.blueprint)
+    app.register_blueprint(model_training_controller.blueprint)
 
     return app
 

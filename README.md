@@ -137,7 +137,7 @@ rose_tracker_app/
 │       ├── image_tracking_controller.py
 │       ├── video_tracking_controller.py
 │       ├── realtime_tracking_controller.py
-│       └── model_retraining_controller.py
+│       └── model_training_controller.py
 │
 ├── config/
 │   ├── settings.py         # Application configuration
@@ -156,7 +156,8 @@ rose_tracker_app/
 │   │   │   ├── video_tracking_service.py
 │   │   │   └── realtime_tracking_service.py
 │   │   └── training_service/
-│   │       └── model_training_service.py
+│   │       ├── model_training_service.py
+│   │       └── dataset_service.py
 │   └── utils/             # Utility functions
 │       ├── file_handler.py
 │       └── tracking_processor.py
