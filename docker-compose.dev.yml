@@ -1,0 +1,28 @@
+# Development environment configuration
+# First build with: docker-compose -f docker-compose.dev.yml build
+# Use with: docker-compose -f docker-compose.dev.yml up
+# Note: Uses port 5000 - ensure no other container is running on this port
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"  # Same port as production for consistency
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./runs:/app/runs
+      - ./config:/app/config
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+    restart: unless-stopped 
