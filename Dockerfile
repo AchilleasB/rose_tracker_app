@@ -1,5 +1,5 @@
-# Build: docker build -t rose_tracker_app:deploy .
-# Run: docker run -p 5000:5000 rose_tracker_app:deploy
+# Build: docker build -t rose_tracker_app:dev .
+# Run: docker run -p 5000:5000 rose_tracker_app:dev
 
 # Use Python 3.11 slim as base image
 FROM python:3.11-slim
@@ -49,4 +49,4 @@ RUN mkdir -p \
 EXPOSE 5000
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "300", "app:create_app()"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "300", "app:create_app()"]
