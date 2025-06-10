@@ -2,6 +2,9 @@ from src.services.tracking_service.base_tracking_service import BaseTrackingServ
 import os
 import cv2
 import subprocess
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VideoTrackingService(BaseTrackingService):
     """Service for tracking roses in videos with web-compatible output"""
@@ -39,16 +42,17 @@ class VideoTrackingService(BaseTrackingService):
             number_of_roses = self.get_number_of_roses(all_results)
             
         except KeyboardInterrupt:
-            print("\nTracking interrupted. Exiting gracefully.")
+            logger.info("\nTracking interrupted. Exiting gracefully.")
         finally:
             cap.release()
 
-        print("Video processed and saved:", output_file, "Number of roses:", number_of_roses)
+        logger.info(f"Video processed and saved: {output_file} Number of roses: {number_of_roses}")
         return output_file, number_of_roses
     
     def save_video(self, output_file, frames, fps):
         """Save video with web-compatible encoding using FFmpeg"""
         if not frames:
+            logger.error("No frames to save")
             raise ValueError("No frames to save")
         
         height, width = frames[0].shape[:2]
@@ -64,6 +68,7 @@ class VideoTrackingService(BaseTrackingService):
             out = cv2.VideoWriter(temp_file, fourcc, fps, (width, height))
             
             if not out.isOpened():
+                logger.error("Could not open video writer")
                 raise RuntimeError("Could not open video writer")
         
         for frame in frames:
@@ -100,12 +105,14 @@ class VideoTrackingService(BaseTrackingService):
             if os.path.exists(input_file):
                 os.remove(input_file)
                 
-        except Exception:
+        except Exception as e:
+            logger.error(f"FFmpeg conversion failed: {str(e)}")
             # Fallback: use original file if conversion fails
             self._handle_conversion_fallback(input_file, output_file)
     
     def _handle_conversion_fallback(self, input_file, output_file):
         """Handle FFmpeg conversion failure by using original file"""
+        logger.warning(f"FFmpeg conversion failed, using original file: {input_file} -> {output_file}")
         if os.path.exists(input_file):
             import shutil
             shutil.copy2(input_file, output_file)

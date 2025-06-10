@@ -13,6 +13,9 @@ from ultralytics import YOLO
 from config.settings import Settings
 from src.utils.training_utils import TrainingUtils
 from src.services.training_service.dataset_service import DatasetService
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ModelTrainingService:
     """Service class for model training operations."""
@@ -38,16 +41,16 @@ class ModelTrainingService:
         # First prepare the dataset
         try:
             dataset_info = dataset_service.prepare_dataset()
-            print(f"Dataset prepared successfully:")
-            print(f"- Training images: {dataset_info['train_count']}")
-            print(f"- Validation images: {dataset_info['val_count']}")
-            print(f"- Dataset directory: {dataset_info['dataset_dir']}")
+            logger.info(f"Dataset prepared successfully:")
+            logger.info(f"- Training images: {dataset_info['train_count']}")
+            logger.info(f"- Validation images: {dataset_info['val_count']}")
+            logger.info(f"- Dataset directory: {dataset_info['dataset_dir']}")
         except ValueError as e:
             raise ValueError(f"Dataset preparation failed: {str(e)}")
 
         # Load the default model
         model = YOLO(self.default_model)
-        print(f"Loaded base model: {self.default_model}")
+        logger.info(f"Loaded base model: {self.default_model}")
         
         # Generate unique model name with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -57,7 +60,7 @@ class ModelTrainingService:
         training_output_dir = os.path.join(self.training_outputs_dir, model_name)
         os.makedirs(training_output_dir, exist_ok=True)
         
-        print(f"Starting model training...")
+        logger.info(f"Starting model training...")
         # Train the model
         results = model.train(
             data=dataset_info['yaml_path'],
@@ -75,7 +78,7 @@ class ModelTrainingService:
             verbose=True
         )
         
-        print(f"Training completed. Saving best model...")
+        logger.info(f"Training completed. Saving best model...")
         # Copy the best model to the models directory
         best_model_path = os.path.join(training_output_dir, model_name, 'weights/best.pt')
         if not os.path.exists(best_model_path):
@@ -97,10 +100,10 @@ class ModelTrainingService:
         })
         TrainingUtils.save_model_metadata(self.metadata_file, metadata)
         
-        print(f"Training results:")
-        print(f"- mAP50: {metrics['mAP50']:.4f}")
-        print(f"- Precision: {metrics['precision']:.4f}")
-        print(f"- Recall: {metrics['recall']:.4f}")
+        logger.info(f"Training results:")
+        logger.info(f"- mAP50: {metrics['mAP50']:.4f}")
+        logger.info(f"- Precision: {metrics['precision']:.4f}")
+        logger.info(f"- Recall: {metrics['recall']:.4f}")
         
         return {
             "model_name": f"{model_name}.pt",
@@ -120,7 +123,7 @@ class ModelTrainingService:
             
             return model_files
         except Exception as e:
-            print(f"Error listing models: {str(e)}")
+            logger.error(f"Error listing models: {str(e)}")
             return []
 
     def select_model(self, model_name):
@@ -132,6 +135,7 @@ class ModelTrainingService:
             # Get the full path of the selected model
             model_path = os.path.join(self.models_dir, model_name)
             if not os.path.exists(model_path):
+                logger.error(f"Model {model_name} not found")
                 raise FileNotFoundError(f"Model {model_name} not found")
         
         # Update the settings with the new default model

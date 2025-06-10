@@ -7,6 +7,9 @@ from collections import defaultdict
 import os
 from config.settings import Settings
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RealtimeTrackingService(BaseTrackingService):
     """Service for real-time rose tracking operations."""
@@ -50,14 +53,17 @@ class RealtimeTrackingService(BaseTrackingService):
             # Increment the next session number
             self.persistent_data['next_session_number'] += 1
             self.persistent_data['last_session_id'] = session_id
+            logger.info(f"Started new session: {session_id} (Session #{session_number})")
             
             return session_id
         except Exception as e:
+            logger.error(f"Failed to start session: {str(e)}")
             raise RuntimeError(f"Failed to start session: {str(e)}")
 
     def stop_session(self, session_id):
         """End a tracking session and return final statistics"""
         if session_id not in self.active_sessions:
+            logger.warning(f"Attempted to stop invalid session: {session_id}")
             raise ValueError("Invalid session ID")
             
         session = self.active_sessions[session_id]
@@ -90,6 +96,7 @@ class RealtimeTrackingService(BaseTrackingService):
         # Stop tracking and cleanup
         self.stop_tracking()
         del self.active_sessions[session_id]
+        logger.info(f"Stopped session: {session_id} (Session #{session['session_number']})")
         
         return session_stats
 
@@ -131,9 +138,11 @@ class RealtimeTrackingService(BaseTrackingService):
     def process_frame(self, session_id, frame):
         """Process a single frame for a given session"""
         if session_id not in self.active_sessions:
+            logger.warning(f"Invalid session ID used in process_frame: {session_id}")
             raise ValueError("Invalid session ID")
             
         if frame is None:
+            logger.error(f"No frame data received for session: {session_id}")
             raise ValueError("No frame data received")
             
         session = self.active_sessions[session_id]
@@ -200,6 +209,7 @@ class RealtimeTrackingService(BaseTrackingService):
         if annotated_frame is None:
             annotated_frame = frame
             
+        logger.debug(f"Processed frame for session: {session_id} (Session #{session['session_number']}) | Frame count: {session['frame_count']}")
         return {
             'frame': annotated_frame,
             'count': session['display_count'],

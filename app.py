@@ -6,10 +6,16 @@ from api.controllers import (
     ImageTrackingController,
     VideoTrackingController,
     RealtimeTrackingController,
-    ModelTrainingController
+    ModelTrainingController,
+    HealthController
 )
 from config.yolo_botsort import download_and_modify_botsort
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(name)s %(message)s'
+)
 
 def create_app():
     # Initialize the Flask application
@@ -26,12 +32,14 @@ def create_app():
     video_tracking_controller = VideoTrackingController()
     realtime_tracking_controller = RealtimeTrackingController()
     model_training_controller = ModelTrainingController()
+    health_controller = HealthController()
 
     # Register Blueprints
     app.register_blueprint(image_tracking_controller.blueprint)
     app.register_blueprint(video_tracking_controller.blueprint)
     app.register_blueprint(realtime_tracking_controller.blueprint)
     app.register_blueprint(model_training_controller.blueprint)
+    app.register_blueprint(health_controller.blueprint)
 
     return app
 

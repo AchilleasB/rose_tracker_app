@@ -1,6 +1,9 @@
 from src.services.tracking_service.base_tracking_service import BaseTrackingService
 import os
 import cv2
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ImageTrackingService(BaseTrackingService):
     """Service for tracking roses in images"""
@@ -23,6 +26,7 @@ class ImageTrackingService(BaseTrackingService):
         # Create annotated image
         annotated_image = results[0].plot()
         if annotated_image is None:
+            logger.error("Failed to create annotated image")
             raise ValueError("Failed to create annotated image")
         
         # Save annotated image
@@ -35,7 +39,7 @@ class ImageTrackingService(BaseTrackingService):
         # Get tracking metadata
         number_of_roses = self.get_number_of_roses(results)
         
-        print("Image processed and saved:", output_file, "Number of roses:", number_of_roses)
+        logger.info(f"Image processed and saved: {output_file} Number of roses: {number_of_roses}")
         return output_file, number_of_roses
 
     def _save_image_annotations(self, results, image_path):
@@ -47,6 +51,7 @@ class ImageTrackingService(BaseTrackingService):
         # Get image dimensions for normalization
         image = cv2.imread(image_path)
         if image is None:
+            logger.error("Failed to read image")
             raise ValueError("Failed to read image")
         img_height, img_width = image.shape[:2]
 

@@ -11,6 +11,9 @@ import shutil
 from datetime import datetime
 from config.settings import Settings
 from src.utils.training_utils import TrainingUtils
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DatasetService:
     """Service class for dataset management operations."""
@@ -60,7 +63,7 @@ class DatasetService:
                 pixel_width = box['width'] * img_width
                 pixel_height = box['height'] * img_height
                 if pixel_width < 10 or pixel_height < 10:
-                    print(f"Skipping small annotation: {pixel_width}x{pixel_height} pixels")
+                    logger.warning(f"Skipping small annotation: {pixel_width}x{pixel_height} pixels")
                     continue
                     
                 # Box is already in normalized format from frontend
@@ -69,7 +72,7 @@ class DatasetService:
                 all_annotations.append(yolo_annotation)
                 
             except Exception as e:
-                print(f"Error processing annotation: {str(e)}")
+                logger.error(f"Error processing annotation: {str(e)}")
                 continue
 
         if not all_annotations:
@@ -132,11 +135,12 @@ class DatasetService:
                 if os.path.getsize(label_path) > 0:
                     valid_image_files.append(image_file)
                 else:
-                    print(f"Warning: Empty label file for {image_file}")
+                    logger.warning(f"Empty label file for {image_file}")
             else:
-                print(f"Warning: No label file found for {image_file}")
+                logger.warning(f"No label file found for {image_file}")
         
         if not valid_image_files:
+            logger.error("No valid image-label pairs found. Please ensure each image has a corresponding non-empty label file.")
             raise ValueError("No valid image-label pairs found. Please ensure each image has a corresponding non-empty label file.")
             
         # Shuffle the files for random split
@@ -181,4 +185,5 @@ class DatasetService:
             os.makedirs(self.temp_dir)
             os.makedirs(os.path.join(self.temp_dir, 'images'))
             os.makedirs(os.path.join(self.temp_dir, 'labels'))
+            logger.info("Temporary dataset cleared successfully")
         return {"message": "Temporary dataset cleared successfully"}
