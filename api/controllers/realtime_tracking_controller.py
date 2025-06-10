@@ -112,7 +112,7 @@ class RealtimeTrackingController:
         """Get current session statistics"""
         try:
             session_id = request.headers.get('X-Session-ID')
-            session_stats = self.realtime_tracker_service.get_session_info(session_id)
+            session_stats = self.realtime_tracker_service.get_session_stats(session_id)
             
             return jsonify({
                 "status": "success",

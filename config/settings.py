@@ -26,6 +26,21 @@ class Settings:
         # Tracking configuration
         self.TRACKING_CONFIDENCE = 0.7
         self.TRACKING_IOU = 0.6
+        
+        # Redis configuration for shared state (production only)
+        self.USE_REDIS = os.getenv('USE_REDIS', 'false').lower() == 'true'
+        
+        # Redis connection settings
+        # For docker-compose: REDIS_HOST=redis (service name)
+        # For Azure ACI: REDIS_HOST=10.0.0.4 (actual IP address)
+        self.REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+        self.REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+        self.REDIS_DB = int(os.getenv('REDIS_DB', 0))
+        self.REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
+        self.REDIS_SESSION_TTL = int(os.getenv('REDIS_SESSION_TTL', 3600))  # 1 hour default
+        
+        # Deployment environment detection
+        self.DEPLOYMENT_ENV = os.getenv('DEPLOYMENT_ENV', 'development')
             
         # Upload directories
         self.UPLOADS_DIR = os.path.join(self.BASE_DIR, 'uploads')
@@ -43,6 +58,12 @@ class Settings:
         # Device configuration (CPU or GPU)
         self.DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {self.DEVICE}")
+        
+        # Log Redis configuration
+        if self.USE_REDIS:
+            logger.info(f"Redis enabled: {self.REDIS_HOST}:{self.REDIS_PORT} (Environment: {self.DEPLOYMENT_ENV})")
+        else:
+            logger.info("Using in-memory state management (development mode)")
 
         # Create necessary directories
         self._create_directories()

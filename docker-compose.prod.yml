@@ -1,0 +1,55 @@
+# Local Testing Setup - Mimics Azure Container Instances
+# This setup tests the exact same configuration as Azure deployment
+
+version: '3.8'
+
+services:
+  # Redis Container (mimics Azure Redis container instance)
+  redis:
+    image: redis:7-alpine
+    container_name: rose_tracker_redis_production # To clean redis in-memory data: docker exec rose_tracker_redis_production redis-cli FLUSHALL
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - rose-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # App Container (mimics Azure app container instance)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rose_tracker_app:production
+    container_name: rose_tracker_app_production
+    ports:
+      - "5000:5000"
+    environment:
+      - USE_REDIS=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_SESSION_TTL=3600
+      - DEPLOYMENT_ENV=production
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+    networks:
+      - rose-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  rose-network:
+    driver: bridge 

@@ -11,6 +11,7 @@ ENV FLASK_APP=app.py
 ENV FLASK_ENV=development
 ENV FLASK_DEBUG=1
 ENV YOLO_CONFIG_DIR=/app/config/ultralytics
+ENV USE_REDIS=false
 
 # Install system dependencies including OpenCV requirements
 RUN apt-get update && apt-get install -y --no-install-recommends \

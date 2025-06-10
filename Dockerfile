@@ -1,5 +1,5 @@
-# Build: docker build -t rose_tracker_app:deploy .
-# Run: docker run -p 5000:5000 rose_tracker_app:deploy
+# Build: docker build -t rose_tracker_app:production .
+# Run: docker run -p 5000:5000 rose_tracker_app:production
 
 # Use Python 3.11 slim as base image
 FROM python:3.11-slim
@@ -14,6 +14,7 @@ ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 ENV FLASK_DEBUG=0
 ENV YOLO_CONFIG_DIR=/app/config/ultralytics
+ENV USE_REDIS=true
 
 # Install system dependencies including OpenCV requirements AND FFmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \

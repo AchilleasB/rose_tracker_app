@@ -6,10 +6,12 @@ from .image_tracking_controller import ImageTrackingController
 from .video_tracking_controller import VideoTrackingController
 from .realtime_tracking_controller import RealtimeTrackingController
 from .model_training_controller import ModelTrainingController
+from .health_controller import HealthController
 
 __all__ = [
     'ImageTrackingController',
     'VideoTrackingController',
     'RealtimeTrackingController',
-    'ModelTrainingController'
+    'ModelTrainingController',
+    'HealthController'
 ] 
