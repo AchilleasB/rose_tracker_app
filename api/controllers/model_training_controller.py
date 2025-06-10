@@ -19,12 +19,15 @@ class ModelTrainingController:
         self.blueprint.route('/dataset/save-annotation', methods=['POST'])(self.save_annotation)
         self.blueprint.route('/dataset/prepare', methods=['POST'])(self.prepare_dataset)
         self.blueprint.route('/dataset/clear', methods=['POST'])(self.clear_dataset)
-        
+        self.blueprint.route('/dataset/images', methods=['GET'])(self.dataset_service.get_dataset_images)
+        self.blueprint.route('/dataset/prepared-images', methods=['GET'])(self.dataset_service.get_prepared_dataset_images)
+
         # Model training routes
         self.blueprint.route('/model/train', methods=['POST'])(self.train_model)
         self.blueprint.route('/model/list', methods=['GET'])(self.list_models)
         self.blueprint.route('/model/select', methods=['POST'])(self.select_model)
 
+    
     def save_annotation(self):
         """Save annotations for an image."""
         try:
@@ -50,6 +53,14 @@ class ModelTrainingController:
             return jsonify({"error": str(e)}), 400
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+    def get_dataset_images(self):
+        """Get all images in the dataset."""
+        try:
+            result = self.dataset_service.get_dataset_images()
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     def prepare_dataset(self):
         """Prepare the dataset for training."""
@@ -57,7 +68,7 @@ class ModelTrainingController:
             result = self.dataset_service.prepare_dataset()
             return jsonify({
                 "message": "Dataset prepared successfully",
-                **result
+                **result    
             }), 200
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
@@ -100,12 +111,11 @@ class ModelTrainingController:
             if 'model_name' not in request.json:
                 return jsonify({"error": "No model name provided"}), 400
 
-            model_path = self.model_trainer.get_model_path(request.json['model_name'])
-            return jsonify({
-                "message": f"Model {request.json['model_name']} selected successfully",
-                "model_path": model_path
-            }), 200
+            
+            result = self.model_trainer.select_model(request.json['model_name'])
+            return jsonify(result), 200
+            
         except FileNotFoundError as e:
             return jsonify({"error": str(e)}), 404
         except Exception as e:
-            return jsonify({"error": str(e)}), 500 
+            return jsonify({"error": str(e)}), 500

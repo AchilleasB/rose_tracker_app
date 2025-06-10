@@ -24,6 +24,7 @@ class ModelTrainingService:
         self.models_dir = self.settings.MODELS_DIR
         self.default_model = self.settings.DEFAULT_MODEL
         self.metadata_file = self.settings.MODEL_METADATA_FILE
+        self.BASE_TRAINING_MODEL = self.settings.BASE_TRAINING_MODEL
         
         # Training outputs directory
         self.training_outputs_dir = os.path.join(self.settings.DATA_DIR, 'training_outputs')
@@ -46,8 +47,8 @@ class ModelTrainingService:
             raise ValueError(f"Dataset preparation failed: {str(e)}")
 
         # Load the default model
-        model = YOLO(self.default_model)
-        print(f"Loaded base model: {self.default_model}")
+        model = YOLO(self.BASE_TRAINING_MODEL)
+        print(f"Loaded base model: {self.BASE_TRAINING_MODEL}")
         
         # Generate unique model name with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

@@ -18,10 +18,12 @@ class Settings:
         self.TRAINING_OUTPUT_DIR = os.path.join(self.DATA_DIR, 'training_outputs')
         
         # Model paths and configuration
+        self.ORIGINAL_DEFAULT_MODEL = os.path.join(self.DATA_DIR, 'best_small.pt')
         self.DEFAULT_MODEL = os.path.join(self.DATA_DIR, 'best_small.pt')
         self.MODEL_METADATA_FILE = os.path.join(self.MODELS_DIR, 'model_metadata.json')
         self.TRACKER_CONFIG_PATH = os.path.join(self.BASE_DIR, 'config', 'modified_botsort.yaml')
         self.BOTSORT_CONFIG_URL = "https://raw.githubusercontent.com/NirAharon/BoT-SORT/main/configs/botsort.yaml"
+        self.BASE_TRAINING_MODEL = os.path.join(self.DATA_DIR, 'yolo11n.pt')
         
         # Tracking configuration
         self.TRACKING_CONFIDENCE = 0.7
@@ -68,10 +70,32 @@ class Settings:
                 logger.error(f"Failed to create directory {directory}: {str(e)}")
                 raise
 
+    def update_default_model(self, model_path):
+        """Update the default model path."""
+        old_model = self.DEFAULT_MODEL
+        self.DEFAULT_MODEL = model_path
+        print(f"Default model updated from {old_model} to {self.DEFAULT_MODEL}")
+
+    def get_current_model(self):
+        """Get the currently selected model (checks file first)."""
+        selected_model_file = os.path.join(self.DATA_DIR, 'selected_model.txt')
+        
+        # Check if user has selected a different model
+        if os.path.exists(selected_model_file):
+            try:
+                with open(selected_model_file, 'r') as f:
+                    saved_model = f.read().strip()
+                if os.path.exists(saved_model):
+                    return saved_model
+            except:
+                pass    
+        # Fall back to original default
+        return self.ORIGINAL_DEFAULT_MODEL
+
     def _verify_model_files(self):
         """Verify that required model files exist."""
         required_files = [
-            (self.DEFAULT_MODEL, "Default model"),
+            (self.ORIGINAL_DEFAULT_MODEL, "Default model"),
             (self.TRACKER_CONFIG_PATH, "Tracker config")
         ]
         

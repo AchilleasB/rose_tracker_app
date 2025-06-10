@@ -109,6 +109,14 @@ class DatasetService:
             "total_annotations_count": len(combined_annotations)
         }
 
+    def get_dataset_images(self):
+        """Get all images in the temp dataset."""
+        temp_images_dir = os.path.join(self.temp_dir, 'images')
+        temp_labels_dir = os.path.join(self.temp_dir, 'labels')
+        
+        return self.get_images_from_directory(temp_images_dir, temp_labels_dir)
+    
+    
     def prepare_dataset(self):
         """Prepare the dataset by splitting into train and val sets."""
         temp_images_dir = os.path.join(self.temp_dir, 'images')
@@ -182,3 +190,139 @@ class DatasetService:
             os.makedirs(os.path.join(self.temp_dir, 'images'))
             os.makedirs(os.path.join(self.temp_dir, 'labels'))
         return {"message": "Temporary dataset cleared successfully"}
+    
+    def get_prepared_dataset_images(self):
+        """Get all images in the prepared dataset (both train and val)."""
+        # Get train images
+        train_images_dir = os.path.join(self.latest_dataset_dir, 'train', 'images')
+        train_labels_dir = os.path.join(self.latest_dataset_dir, 'train', 'labels')
+        
+        # Get val images  
+        val_images_dir = os.path.join(self.latest_dataset_dir, 'val', 'images')
+        val_labels_dir = os.path.join(self.latest_dataset_dir, 'val', 'labels')
+        
+        # Get images from both directories
+        train_data = self.get_images_from_directory(train_images_dir, train_labels_dir)
+        val_data = self.get_images_from_directory(val_images_dir, val_labels_dir)
+        
+        # Mark train/val images differently
+        for img in train_data['images']:
+            img['split'] = 'train'
+            img['source'] = 'prepared'
+        
+        for img in val_data['images']:
+            img['split'] = 'val'
+            img['source'] = 'prepared'
+            img['id'] = len(train_data['images']) + img['id']  # Continue ID sequence
+        
+        # Combine results
+        combined_images = train_data['images'] + val_data['images']
+        combined_summary = {
+            'total_images': train_data['summary']['total_images'] + val_data['summary']['total_images'],
+            'images_with_annotations': train_data['summary']['images_with_annotations'] + val_data['summary']['images_with_annotations'],
+            'total_annotations': train_data['summary']['total_annotations'] + val_data['summary']['total_annotations'],
+            'train_images': train_data['summary']['total_images'],
+            'val_images': val_data['summary']['total_images']
+        }
+        
+        return {
+            'images': combined_images,
+            'summary': combined_summary
+        }
+
+    def get_images_from_directory(self, images_dir, labels_dir=None):
+        """Get all images from a directory with their annotations and metadata."""
+        
+        if not os.path.exists(images_dir):
+            return {
+                'images': [],
+                'summary': {
+                    'total_images': 0,
+                    'images_with_annotations': 0,
+                    'total_annotations': 0
+                }
+            }
+        
+        # Get all image files
+        image_files = [f for f in os.listdir(images_dir) 
+                    if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        
+        if not image_files:
+            return {
+                'images': [],
+                'summary': {
+                    'total_images': 0,
+                    'images_with_annotations': 0,
+                    'total_annotations': 0
+                }
+            }
+        
+        images_data = []
+        total_annotations = 0
+        
+        for filename in image_files:
+            image_path = os.path.join(images_dir, filename)
+            
+            # Get image metadata
+            try:
+                import cv2
+                img = cv2.imread(image_path)
+                if img is not None:
+                    height, width = img.shape[:2]
+                else:
+                    width, height = 640, 480  # fallback
+            except Exception as e:
+                print(f"Error reading image {filename}: {e}")
+                width, height = 640, 480  # fallback
+            
+            # Check for annotation file (only if labels_dir is provided)
+            has_annotations = False
+            annotation_count = 0
+            
+            if labels_dir and os.path.exists(labels_dir):
+                base_name = os.path.splitext(filename)[0]
+                annotation_file = os.path.join(labels_dir, f"{base_name}.txt")
+                
+                has_annotations = os.path.exists(annotation_file)
+                
+                if has_annotations:
+                    try:
+                        with open(annotation_file, 'r') as f:
+                            annotations = f.readlines()
+                            annotation_count = len([line.strip() for line in annotations if line.strip()])
+                            total_annotations += annotation_count
+                    except Exception as e:
+                        print(f"Error reading annotation file {annotation_file}: {e}")
+                        has_annotations = False
+            
+            # Convert image to base64
+            try:
+                import base64
+                with open(image_path, 'rb') as img_file:
+                    img_base64 = base64.b64encode(img_file.read()).decode('utf-8')
+            except Exception as e:
+                print(f"Error converting image {filename} to base64: {e}")
+                continue  # Skip this image if we can't read it
+            
+            images_data.append({
+                'id': len(images_data),
+                'filename': filename,
+                'width': width,
+                'height': height,
+                'has_annotations': has_annotations,
+                'annotation_count': annotation_count,
+                'image_data': f"data:image/jpeg;base64,{img_base64}",
+                'source': 'temp' if 'temp' in images_dir else 'prepared'
+            })
+        
+        # Calculate summary
+        images_with_annotations = len([img for img in images_data if img['has_annotations']])
+        
+        return {
+            'images': images_data,
+            'summary': {
+                'total_images': len(images_data),
+                'images_with_annotations': images_with_annotations,
+                'total_annotations': total_annotations
+            }
+        }
