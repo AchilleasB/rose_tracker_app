@@ -110,6 +110,64 @@
             margin: 10px 0;
             display: none;
         }
+        .status-box#streamUniqueCount {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+        #streamUniqueCount .status-value {
+            color: #9C27B0;
+        }
+        .status-box#streamCurrentCount {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+        #streamCurrentCount .status-value {
+            color: #FF5722;
+        }
+        .count-animation {
+            transition: all 0.3s ease;
+        }
+        .count-update {
+            transform: scale(1.1);
+            color: #4CAF50;
+        }
+        .session-history-panel {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .session-table {
+            margin-top: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        .session-table th, .session-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .session-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .session-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .session-row {
+            transition: background-color 0.3s ease;
+        }
+        .session-row.new-session {
+            background-color: #e3f2fd;
+            animation: highlight 2s ease-out;
+        }
+        @keyframes highlight {
+            0% { background-color: #e3f2fd; }
+            100% { background-color: transparent; }
+        }
     </style>
 </head>
 <body>
@@ -121,12 +179,24 @@
         </div>
         
         <div class="status-container">
-            <div class="status-box" id="streamRoseCount">
-                <div class="status-label">Total Roses (Stream)</div>
-                <div class="status-value" id="streamCount">0</div>
+            <div class="status-box" id="streamSessionInfo">
+                <div class="status-label">Session</div>
+                <div class="status-value" id="streamSessionNumber">-</div>
+            </div>
+            <div class="status-box" id="streamSessionUnique">
+                <div class="status-label">Session Unique Roses</div>
+                <div class="status-value count-animation" id="streamSessionUniqueValue">0</div>
+            </div>
+            <div class="status-box" id="streamTotalUnique">
+                <div class="status-label">Total Unique Roses</div>
+                <div class="status-value count-animation" id="streamTotalUniqueValue">0</div>
+            </div>
+            <div class="status-box" id="streamCurrentCount">
+                <div class="status-label">Current Roses in Frame</div>
+                <div class="status-value count-animation" id="streamCurrentCountValue">0</div>
             </div>
             <div class="status-box" id="streamFpsValue">
-                <div class="status-label">Stream FPS</div>
+                <div class="status-label">Processing FPS</div>
                 <div class="status-value" id="streamFps">0</div>
             </div>
             <div class="status-box" id="streamStatus">
@@ -140,16 +210,44 @@
             <button id="stopStreamButton" onclick="stopStream()" disabled style="background-color: #f44336; color: white;">Stop Stream</button>
         </div>
         <div id="errorMessage" class="error-message"></div>
+
+        <!-- Session History Panel -->
+        <div class="session-history-panel" style="margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+            <h3>Session History</h3>
+            <div class="table-responsive">
+                <table class="session-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th>Session #</th>
+                            <th>Duration</th>
+                            <th>Session Count</th>
+                            <th>Total Count</th>
+                            <th>Avg FPS</th>
+                            <th>Frames</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionHistoryBody">
+                        <!-- Session rows will be added here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
     let isStreaming = false;
     let streamLocalStream = null;
     let lastStreamFrameTime = 0;
+    let currentSessionId = null;
+    let sessionStats = null;
+    let sessionHistory = [];  // Store all session history
     const streamVideoElement = document.getElementById('streamVideo');
     const streamFpsCounter = document.getElementById('streamFpsCounter');
     const streamStatusElement = document.getElementById('streamStatusValue');
-    const streamCountElement = document.getElementById('streamCount');
+    const streamSessionNumberElement = document.getElementById('streamSessionNumber');
+    const streamSessionUniqueElement = document.getElementById('streamSessionUniqueValue');
+    const streamTotalUniqueElement = document.getElementById('streamTotalUniqueValue');
+    const streamCurrentCountElement = document.getElementById('streamCurrentCountValue');
     const streamFpsElement = document.getElementById('streamFps');
     const canvas = document.createElement('canvas');
     const canvasContext = canvas.getContext('2d');
@@ -169,94 +267,144 @@
         document.getElementById('errorMessage').style.display = 'none';
     }
 
-    async function startStream() {
-        try {
-            updateStatus('Starting stream...', 'warning');
-            hideError();
+    function animateCountUpdate(element) {
+        element.classList.add('count-update');
+        setTimeout(() => element.classList.remove('count-update'), 300);
+    }
 
-            streamLocalStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    facingMode: 'environment'
-                }
-            });
+    function formatDuration(seconds) {
+        if (!seconds || seconds < 0) return '0m 0s';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}m ${secs}s`;
+    }
 
-            const streamVideo = document.createElement('video');
-            streamVideo.srcObject = streamLocalStream;
-            streamVideo.autoplay = true;
-            streamVideo.muted = true;
-            streamVideo.playsInline = true;
-            streamVideo.style.display = 'none';
-            document.body.appendChild(streamVideo);
+    function updateSessionHistoryTable() {
+        const tbody = document.getElementById('sessionHistoryBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';  // Clear existing rows
 
-            await new Promise((resolve, reject) => {
-                streamVideo.onloadedmetadata = () => {
-                    streamVideo.play()
-                        .then(() => {
-                            console.log('Video started playing');
-                            resolve();
-                        })
-                        .catch(error => {
-                            console.error('Error playing video:', error);
-                            reject(error);
-                        });
-                };
-                streamVideo.onerror = (error) => {
-                    console.error('Video error:', error);
-                    reject(error);
-                };
-            });
-
-            if (streamVideo.paused) {
-                throw new Error('Video failed to start playing');
+        sessionHistory.forEach((session, index) => {
+            if (!session) return;  // Skip invalid sessions
+            
+            const row = document.createElement('tr');
+            row.className = 'session-row';
+            if (index === sessionHistory.length - 1) {
+                row.classList.add('new-session');
             }
 
-            isStreaming = true;
-            document.getElementById('startStreamButton').disabled = true;
-            document.getElementById('stopStreamButton').disabled = false;
-            
-            processStreamFrame(streamVideo);
-            updateStatus('Stream Active', 'active');
-        } catch (error) {
-            console.error('Error starting stream:', error);
-            showError(`Stream Error: ${error.message}`);
-            updateStatus('Stream Error', 'error');
+            // Ensure all values are properly formatted
+            const sessionNumber = session.session_number || '-';
+            const duration = formatDuration(session.duration || 0);
+            const sessionCount = session.session_unique_roses || 0;
+            const totalCount = session.total_unique_roses || 0;
+            const avgFps = (session.average_fps || 0).toFixed(1);
+            const frames = session.total_frames_processed || 0;
+
+            row.innerHTML = `
+                <td>${sessionNumber}</td>
+                <td>${duration}</td>
+                <td>${sessionCount}</td>
+                <td>${totalCount}</td>
+                <td>${avgFps}</td>
+                <td>${frames}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function displaySessionStats(stats) {
+        if (!stats) return;
+        
+        // Update session number
+        streamSessionNumberElement.textContent = `Session ${stats.session_number}`;
+        
+        // Update counts
+        streamSessionUniqueElement.textContent = stats.session_unique_roses || '0';
+        streamTotalUniqueElement.textContent = stats.total_unique_roses || '0';
+        
+        // Add to session history
+        sessionHistory.push(stats);
+        updateSessionHistoryTable();
+        
+        // Store in sessionStorage
+        try {
+            sessionStorage.setItem('roseTrackerSessionHistory', JSON.stringify(sessionHistory));
+        } catch (e) {
+            console.warn('Could not save session history to sessionStorage:', e);
+        }
+        
+        // Log detailed session information
+        console.log('Session Statistics:', {
+            session_number: stats.session_number,
+            session_unique_roses: stats.session_unique_roses,
+            total_unique_roses: stats.total_unique_roses,
+            final_count: stats.final_count,
+            duration: stats.duration.toFixed(1) + 's',
+            average_fps: stats.average_fps.toFixed(1),
+            total_frames: stats.total_frames_processed
+        });
+    }
+
+    // Load session history from sessionStorage on page load
+    function loadSessionHistory() {
+        try {
+            const savedHistory = sessionStorage.getItem('roseTrackerSessionHistory');
+            if (savedHistory) {
+                sessionHistory = JSON.parse(savedHistory);
+                updateSessionHistoryTable();
+            }
+        } catch (e) {
+            console.warn('Could not load session history from sessionStorage:', e);
         }
     }
 
-    async function processStreamFrame(streamVideo) {
-        if (!isStreaming) return;
+    // Call this when the page loads
+    loadSessionHistory();
+
+    function resetSessionDisplay() {
+        streamSessionNumberElement.textContent = '-';
+        streamSessionUniqueElement.textContent = '0';
+        streamCurrentCountElement.textContent = '0';
+        streamFpsCounter.textContent = 'FPS: 0';
+        streamFpsElement.textContent = '0';
+    }
+
+    async function startStream() {
+        if (isStreaming) {
+            console.warn('Stream already running');
+            return;
+        }
 
         try {
-            canvas.width = streamVideo.videoWidth;
-            canvas.height = streamVideo.videoHeight;
-            canvasContext.drawImage(streamVideo, 0, 0);
+            updateStatus('Starting stream...', 'warning');
+            document.getElementById('startStreamButton').disabled = true;
+            document.getElementById('stopStreamButton').disabled = false;
 
-            const blob = await new Promise((resolve) => {
-                canvas.toBlob(resolve, 'image/jpeg', 0.8);
+            // Get camera stream
+            streamLocalStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            
+            // Create video element for processing
+            const streamVideo = document.createElement('video');
+            streamVideo.srcObject = streamLocalStream;
+            streamVideo.setAttribute('playsinline', '');
+            streamVideo.setAttribute('autoplay', '');
+            streamVideo.style.display = 'none';
+            document.body.appendChild(streamVideo);
+            
+            // Wait for video to be ready
+            await new Promise((resolve) => {
+                streamVideo.onloadedmetadata = () => {
+                    streamVideo.play();
+                    resolve();
+                };
             });
 
-            if (!blob) {
-                console.warn('Failed to create blob from canvas');
-                requestAnimationFrame(() => processStreamFrame(streamVideo));
-                return;
-            }
-
-            const base64Image = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-
-            const response = await fetch('/track/realtime/stream', {
+            // Start tracking session
+            const response = await fetch('/track/realtime/start', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    image: base64Image
-                })
+                headers: { 'Content-Type': 'application/json' }
             });
 
             if (!response.ok) {
@@ -264,83 +412,202 @@
             }
 
             const result = await response.json();
-
             if (result.status === 'success') {
-                streamVideoElement.src = result.image;
+                currentSessionId = result.session_id;
+                isStreaming = true;
+                updateStatus('Stream Active', 'active');
                 
-                streamCountElement.textContent = result.count;
-                streamFpsElement.textContent = result.fps.toFixed(1);
-                streamFpsCounter.textContent = `FPS: ${result.fps.toFixed(1)}`;
+                // Update session handler
+                SessionHandler.updateCurrentSession(currentSessionId, result.session_number);
                 
-                const now = performance.now();
-                const elapsed = now - lastStreamFrameTime;
-                streamFps = 1000 / elapsed;
-                lastStreamFrameTime = now;
-
-                console.log('Frame processed successfully:', {
-                    frameSize: `${streamVideo.videoWidth}x${streamVideo.videoHeight}`,
-                    fps: result.fps,
-                    count: result.count,
-                    trackedRoses: result.tracked_roses?.length || 0
-                });
+                // Start processing frames
+                processStreamFrame(streamVideo);
             } else {
-                console.warn('Stream processing error:', result.message);
+                throw new Error(result.message || 'Failed to start tracking');
             }
+
         } catch (error) {
-            console.error('Error in stream frame processing:', error);
-            showError('Stream Processing Error: ' + error.message);
-        } finally {
-            if (isStreaming) {
-                requestAnimationFrame(() => processStreamFrame(streamVideo));
-            }
+            console.error('Error starting stream:', error);
+            showError('Error starting stream: ' + error.message);
+            updateStatus('Start Failed', 'error');
+            await cleanupStream();
         }
     }
 
     async function stopStream() {
-        isStreaming = false;
+        if (!currentSessionId || !isStreaming) {
+            console.warn('No active session to stop');
+            return;
+        }
 
+        try {
+            isStreaming = false;  // Stop frame processing
+            updateStatus('Stopping stream...', 'warning');
+
+            // Stop all tracks and cleanup video elements
+            await cleanupStream();
+
+            // Call backend to stop tracking session
+            const response = await fetch('/track/realtime/stop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': currentSessionId
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.status === 'success' && result.session_stats) {
+                // Only update session handler if we have valid stats
+                SessionHandler.addSession(result.session_stats);
+                SessionHandler.clearCurrentSession();
+                
+                // Update display with final stats
+                streamSessionNumberElement.textContent = `Session ${result.session_stats.session_number}`;
+                streamSessionUniqueElement.textContent = result.session_stats.session_unique_roses.toString();
+                streamTotalUniqueElement.textContent = result.session_stats.total_unique_roses.toString();
+                
+                updateStatus('Stream Stopped', 'inactive');
+            } else {
+                throw new Error(result.message || 'Failed to stop tracking');
+            }
+
+        } catch (error) {
+            console.error('Error stopping stream:', error);
+            showError('Error stopping stream: ' + error.message);
+            updateStatus('Stop Failed', 'error');
+        } finally {
+            // Always cleanup session state
+            currentSessionId = null;
+            document.getElementById('startStreamButton').disabled = false;
+            document.getElementById('stopStreamButton').disabled = true;
+        }
+    }
+
+    async function cleanupStream() {
+        // Stop all tracks
         if (streamLocalStream) {
             streamLocalStream.getTracks().forEach(track => track.stop());
             streamLocalStream = null;
         }
 
+        // Remove video element
         const streamVideo = document.querySelector('video[srcObject]');
         if (streamVideo) {
             streamVideo.remove();
         }
 
+        // Clear video display
         if (streamVideoElement) {
             streamVideoElement.src = '';
         }
 
-        streamFps = 0;
-        streamFpsCounter.textContent = 'FPS: 0';
-        streamFpsElement.textContent = '0';
-        streamCountElement.textContent = '0';
+        // Reset session-specific displays
+        resetSessionDisplay();
+    }
 
-        document.getElementById('startStreamButton').disabled = false;
-        document.getElementById('stopStreamButton').disabled = true;
+    async function processStreamFrame(streamVideo) {
+        if (!isStreaming || !currentSessionId) {
+            console.log('Stopping frame processing:', { isStreaming, currentSessionId });
+            return;
+        }
 
         try {
-            const response = await fetch('/track/realtime/stop', {
-                method: 'POST'
+            // Capture frame from video
+            canvas.width = streamVideo.videoWidth;
+            canvas.height = streamVideo.videoHeight;
+            canvasContext.drawImage(streamVideo, 0, 0);
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Send frame to server
+            const response = await fetch('/track/realtime/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': currentSessionId
+                },
+                body: JSON.stringify({ image: imageData })
             });
+
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}`);
             }
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                // Update video display
+                streamVideoElement.src = result.image;
+                
+                // Update session number if available
+                if (result.session_number) {
+                    streamSessionNumberElement.textContent = `Session ${result.session_number}`;
+                }
+                
+                // Update counts with animation if they changed
+                const sessionUnique = result.session_unique?.toString() || '0';
+                const totalUnique = result.total_unique?.toString() || '0';
+                const currentInFrame = result.current_in_frame?.toString() || '0';
+                
+                if (streamSessionUniqueElement.textContent !== sessionUnique) {
+                    streamSessionUniqueElement.textContent = sessionUnique;
+                    animateCountUpdate(streamSessionUniqueElement);
+                }
+                
+                if (streamTotalUniqueElement.textContent !== totalUnique) {
+                    streamTotalUniqueElement.textContent = totalUnique;
+                    animateCountUpdate(streamTotalUniqueElement);
+                }
+                
+                if (streamCurrentCountElement.textContent !== currentInFrame) {
+                    streamCurrentCountElement.textContent = currentInFrame;
+                    animateCountUpdate(streamCurrentCountElement);
+                }
+                
+                streamFpsElement.textContent = (result.fps || 0).toFixed(1);
+                streamFpsCounter.textContent = `FPS: ${(result.fps || 0).toFixed(1)}`;
+
+                // Log detailed tracking info
+                if (result.count_updated) {
+                    console.log('Count updated:', {
+                        session_number: result.session_number,
+                        session_unique: result.session_unique,
+                        total_unique: result.total_unique,
+                        current_in_frame: result.current_in_frame,
+                        fps: result.fps,
+                        tracked_roses: result.tracked_roses?.length || 0
+                    });
+                }
+            } else {
+                console.warn('Stream processing error:', result.message);
+                if (result.message === 'Invalid session ID') {
+                    await stopStream();
+                    return;
+                }
+            }
         } catch (error) {
-            console.error('Error stopping stream:', error);
-            showError('Error stopping stream: ' + error.message);
+            console.error('Error in stream frame processing:', error);
+            showError('Stream Processing Error: ' + error.message);
         }
 
-        updateStatus('Stream Stopped', 'inactive');
+        // Schedule next frame only if still streaming
+        if (isStreaming && currentSessionId) {
+            requestAnimationFrame(() => processStreamFrame(streamVideo));
+        }
     }
 
-    window.addEventListener('beforeunload', () => {
-        if (isStreaming) {
-            stopStream();
+    // Add event listeners for page unload
+    window.addEventListener('beforeunload', async () => {
+        if (isStreaming && currentSessionId) {
+            await stopStream();
         }
     });
     </script>
+
+    <!-- Add a separate script file for session handling -->
+    <script src="{{ url_for('static', filename='js/session_handler.js') }}"></script>
 </body>
 </html>

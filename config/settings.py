@@ -26,7 +26,7 @@ class Settings:
         self.BASE_TRAINING_MODEL = os.path.join(self.DATA_DIR, 'yolo11n.pt')
         
         # Tracking configuration
-        self.TRACKING_CONFIDENCE = 0.7
+        self.TRACKING_CONFIDENCE = 0.8
         self.TRACKING_IOU = 0.6
             
         # Upload directories
