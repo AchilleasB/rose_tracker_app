@@ -24,7 +24,7 @@ class Settings:
         self.BOTSORT_CONFIG_URL = "https://raw.githubusercontent.com/NirAharon/BoT-SORT/main/configs/botsort.yaml"
         
         # Tracking configuration
-        self.TRACKING_CONFIDENCE = 0.7
+        self.TRACKING_CONFIDENCE = 0.8
         self.TRACKING_IOU = 0.6
             
         # Upload directories
