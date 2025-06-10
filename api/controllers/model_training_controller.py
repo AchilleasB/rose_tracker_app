@@ -68,7 +68,7 @@ class ModelTrainingController:
             result = self.dataset_service.prepare_dataset()
             return jsonify({
                 "message": "Dataset prepared successfully",
-                **result    
+                **result
             }), 200
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
